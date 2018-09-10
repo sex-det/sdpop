@@ -62,8 +62,8 @@ int read_cnt2(FILE *fp, int namelen, int chromosomes, char **contig_p, int **npo
 	int CUR_MAX = 4095;
 	int NCONTIG_BATCH = 100;
 	int ncontigs_allocated,ncontigs;
-	char *line = calloc((size_t)CUR_MAX,sizeof(char));
-	char *tmpline = calloc((size_t)CUR_MAX,sizeof(char));
+	char *line = (char*)calloc((size_t)CUR_MAX,sizeof(char));
+	char *tmpline = (char*)calloc((size_t)CUR_MAX,sizeof(char));
 	int count = 0; 
 	int length = 0;
 	char ch,nuc1,nuc2;
@@ -98,8 +98,8 @@ int read_cnt2(FILE *fp, int namelen, int chromosomes, char **contig_p, int **npo
 			if(count == CUR_MAX) { // time to expand (for unexepectedly large line lengths) ?
 				CUR_MAX *= 2; 
 				count = 0;
-				line = realloc(line, sizeof(char) * CUR_MAX); 
-				tmpline = realloc(tmpline, sizeof(char) * CUR_MAX); 
+				line = (char*)realloc(line, sizeof(char) * CUR_MAX); 
+				tmpline = (char*)realloc(tmpline, sizeof(char) * CUR_MAX); 
 			}
 			ch = getc(fp); // read from stream.
 			line[length] = ch;
@@ -159,7 +159,7 @@ int read_cnt2(FILE *fp, int namelen, int chromosomes, char **contig_p, int **npo
 					}
 				}
 				else {
-					if((polysite[k]=realloc(polysite[k],sizeof(int *)*(t+1)))==NULL){
+					if((polysite[k]=(int**)realloc(polysite[k],sizeof(int *)*(t+1)))==NULL){
 						fprintf(stderr,"error in memory allocation\n");
 						exit(1);
 					}
@@ -226,8 +226,8 @@ int read_cnt(FILE *fp, 	int namelen, int chromosomes, char **contig_p, int **npo
 	int CUR_MAX = 4095;
 	int NCONTIG_BATCH = 100;
 	int ncontigs_allocated,ncontigs;
-	char *line = calloc((size_t)CUR_MAX,sizeof(char));
-	char *tmpline = calloc((size_t)CUR_MAX,sizeof(char));
+	char *line = (char*)calloc((size_t)CUR_MAX,sizeof(char));
+	char *tmpline = (char*)calloc((size_t)CUR_MAX,sizeof(char));
 	int count = 0; 
 	int length = 0;
 	char ch;
@@ -262,8 +262,8 @@ int read_cnt(FILE *fp, 	int namelen, int chromosomes, char **contig_p, int **npo
 			if(count == CUR_MAX) { // time to expand (for unexepectedly large line lengths) ?
 				CUR_MAX *= 2; 
 				count = 0;
-				line = realloc(line, sizeof(char) * CUR_MAX); 
-				tmpline = realloc(tmpline, sizeof(char) * CUR_MAX); 
+				line = (char*)realloc(line, sizeof(char) * CUR_MAX); 
+				tmpline = (char*)realloc(tmpline, sizeof(char) * CUR_MAX); 
 			}
 			ch = getc(fp); // read from stream.
 			line[length] = ch;
@@ -323,7 +323,7 @@ int read_cnt(FILE *fp, 	int namelen, int chromosomes, char **contig_p, int **npo
 					}
 				}
 				else {
-					if((polysite[k]=realloc(polysite[k],sizeof(int *)*(t+1)))==NULL){
+					if((polysite[k]=(int**)realloc(polysite[k],sizeof(int *)*(t+1)))==NULL){
 						fprintf(stderr,"error in memory allocation\n");
 						exit(1);
 					}
@@ -378,7 +378,7 @@ char **getgennames(char *line, int *nind)
 	
 	int ni=0,i=0,ichar,pipepos;
 	char c;
-	char *tmpline = calloc(strlen(line),sizeof(char));
+	char *tmpline = (char*)calloc(strlen(line),sizeof(char));
 	char **name;
 	
 	//we'll have "position\tname1\tname2\t...\tnameN\0 : the number of tabs is the number of individuals.
