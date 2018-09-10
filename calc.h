@@ -7,12 +7,10 @@
 #define FEMALE 0
 #define MALE 1
 #define SEXES 2
-#define JTYPES 5 //number of biological segregation types
-#define J_AUTO 0
-#define J_HAPLOID 1
-#define J_PARA 2
-#define J_HEMI 3
-#define J_SEX 4
+//number of biological segregation types
+enum SegregationType {
+	J_AUTO, J_HAPLOID, J_PARA, J_HEMI, J_SEX, JTYPES
+};
 #define JLTYPES 9 //number of detailed segregation types
 #define JL_AUTO 0
 #define JL_HAPLOID 1
