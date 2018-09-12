@@ -548,11 +548,12 @@ int main(int argc, char *argv[]) {
 	long double temp[JTYPES],templ[LTYPES],maxgp,sumL;
 	int **bmin;
 //	long double logexp,sumj,lsumj;
-	double pmin,pmax,fx,fy;
+	double pmin,pmax,gmax,fx,fy;
 	int	jmin,jmax,lmax,gpmax;
 	long double oldloglik,loglik;
 	double U[3][3],Usim,Udis;
 	int ni,nI=0,npi=1,sites_individuals,npar;
+	double *geom_score;
 	
 //	feenableexcept(FE_INVALID & FE_OVERFLOW);
 //	feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT);
@@ -1075,55 +1076,9 @@ int main(int argc, char *argv[]) {
 	}		
 	//End of EM algorithm. Outputting
 	
-	if((bmin=(int **)calloc((size_t)ncontigs,sizeof(int *)))==NULL) { 
+	if((geom_score=(double *)malloc(sizeof(double)*JTYPES))==NULL) {
 		fprintf(stderr,"error in memory allocation\n");
 		exit(1);
-	}
-
-	if (mode == SITE ) {
-		//calculate likelihoods and posterior probabilities per contig 
-		for (k=0;k<ncontigs;k++) {
-			if(npolysites[k]>0) {
-				if((bmin[k]=(int *)calloc((size_t)npolysites[k],sizeof(int)))==NULL) { 
-					fprintf(stderr,"error in memory allocation\n");
-					exit(1);
-				}
-//				for (t=0; t<npolysites[k]; t++){
-//					pmin=condsegprob[k][t][0];
-//					bmin[k][t]=0;
-//					for(j=1;j<JTYPES;j++) {
-//						if(condsegprob[k][t][j]<pmin){
-//							bmin[k][t]=j;
-//						}
-//					}
-//				}
-				pmax=0.0;
-				jmax=-1;
-				for(j=0;j<JTYPES;j++) {
-					sumL=0;
-					sumET=0;
-					for (t=0; t<npolysites[k]; t++){
-						sumL+=condsegprob[k][t][j];
-//						sumET+=expS[k][t][j];
-//						sumET+=log(condsegprob[k][t][j]/(condsegprob[k][t][bmin[k][t]]));
-						sumET+=log(condsegprob[k][t][j]);
-					}
-//					expR[k][j]=sumET/npolysites[k];
-					temp[j]=sumET/npolysites[k];
-					contigllik[k][j]=logl(sumL/npolysites[k]);
-//					if(expl(contigllik[k][j])>pmax){
-//							pmax=expl(contigllik[k][j]);
-//							jmax=j;
-//					}
-					if(expl(temp[j])>pmax){
-							pmax=expl(temp[j]);
-							jmax=j;
-					}
-				}
-//				double dpi[5]={0.2,0.2,0.2,0.2,0.2};
-				loghorner(JTYPES,jmax,temp,pi,expR[k]);
-			}
-		}
 	}
 	
 	fprintf(outfile,"pi");
@@ -1155,7 +1110,34 @@ int main(int argc, char *argv[]) {
 	fprintf(outfile,", BIC (sites*individuals): %Lf\n",-2.*loglik+npar*log(sites_individuals));
 
 	for (k=0;k<ncontigs;k++) {
-		if(npolysites[k]>0) {
+		//calculate likelihoods and posterior probabilities per contig 
+			if(npolysites[k]>0) {
+				if (mode == SITE ) { //calculate mean posterior
+					for(j=0;j<JTYPES;j++) {
+						sumET=0;
+						for (t=0; t<npolysites[k]; t++){
+							sumET+=expS[k][t][j];
+							//						sumET+=log(condsegprob[k][t][j]/(condsegprob[k][t][bmin[k][t]]));
+						}
+						expR[k][j]=sumET/npolysites[k];
+					}
+				}
+				//calculate geometric mean scores
+				pmax=0.0;
+				jmax=-1;
+				for(j=0;j<JTYPES;j++) {
+					sumL=0;
+					for (t=0; t<npolysites[k]; t++){
+						sumL+=log(condsegprob[k][t][j]);
+					}
+					temp[j]=sumL/npolysites[k];
+					if(expl(temp[j])>pmax){
+							pmax=expl(temp[j]);
+							jmax=j;
+					}
+				}
+				loghorner(JTYPES,jmax,temp,pi,geom_score);
+
 //			fprintf(outfile,">%s\t%d",&contig[k*NAME_LEN],npolysites[k]);
 			fprintf(outfile,">%s\t%d",contig[k].data(),npolysites[k]);
 			ni=0;
@@ -1165,27 +1147,26 @@ int main(int argc, char *argv[]) {
 				}
 			}
 			fprintf(outfile,"\t%f",(double)ni/(double)npolysites[k]);
-//		if(npolysites[k]>0) {
-			pmax=0.0;
-			lmax=-1;
+				pmax=0.0;
+				gmax=0.0;
+				jmax=-1;
+				lmax=-1;
 			for(j=0;j<JTYPES;j++) {
-				if (expR[k][j]>pmax) {
+				if(geom_score[j] > gmax){
+					gmax=geom_score[j];
 					lmax=j;
+				}				
+				if(expR[k][j] > pmax){
 					pmax=expR[k][j];
-				}
-				if(j==0){
-					fprintf(outfile,"\t%d\t%Le\t%f",j,expl(contigllik[k][j]),expR[k][j]);
-				}
-				else{
-//					fprintf(outfile,"\t%d\t%Le\t%f",j,expl(contigllik[k][j])/expl(contigllik[k][0]),expR[k][j]);
-					fprintf(outfile,"\t%d\t%Le\t%f",j,contigllik[k][j],expR[k][j]);
-				}
+					jmax=j;
+				}				
 			}
-			fprintf(outfile,"\t%d",lmax);
-//			fprintf(outfile,"\t%f\n",zscore(k,npolysites[k],polysite[k],rho,Q,lmax,1000,P[k],condsegprob[k]));
-			fprintf(outfile,"\n");
+			for(j=0;j<JTYPES;j++) {
+				fprintf(outfile,"\t%d\t%e\t%e",j,expR[k][j],geom_score[j]);
+			}
+//			fprintf(outfile,"\t%f\n",zscore(k,npolysites[k],polysite[k],rho,Q,lmax,1000,P[k],condsegprob[k]));			
+			fprintf(outfile,"\t%d/%d\n",jmax,lmax);
 			
-//			fprintf(outfile,"\t%d\n",lmax);
 			for (t=0; t<npolysites[k]; t++){
 				fprintf(outfile,"%d\t",polysite[k][t][0]);
 				fprintf(outfile,"%c%c\t",int2DNA(polysite[k][t][7]),int2DNA(polysite[k][t][8]));			
@@ -1193,6 +1174,7 @@ int main(int argc, char *argv[]) {
 					fprintf(outfile,"%d\t",polysite[k][t][i]);
 				}
 				//calculate estimated frequencies of allele 1 on X and Y
+				//first method: fx and fy correspond to those matching with the most probable XY segregation subtype
 				pmax=0.0;
 				lmax=-1;
 				for(l=0;l<LTYPES;l++){
@@ -1217,9 +1199,11 @@ int main(int argc, char *argv[]) {
 					fx=0;
 					fy=F[k][t][JL_SEX1+lmax];
 				}
+				fprintf(outfile,"%f %f %d\t",fx,fy,lmax);
+				//second method: fx and fy correspond to those matching with the most probable XY segregation subtype
 				fx=expA[k][t][0]*(1-F[k][t][JL_SEX1])+expA[k][t][1]*F[k][t][JL_SEX2]+expA[k][t][2];				
 				fy=expA[k][t][0]+expA[k][t][2]*(1-F[k][t][JL_SEX3])+expA[k][t][3]*F[k][t][JL_SEX4];				
-				fprintf(outfile,"%f %f %d\t",fx,fy,lmax);
+				fprintf(outfile,"%f %f\t",fx,fy);
 					for(l=0;l<LTYPES;l++){
 						fprintf(outfile,"%f\t",expA[k][t][l]);
 					}
@@ -1234,13 +1218,6 @@ int main(int argc, char *argv[]) {
 						}
 						fprintf(outfile,"%Le %f\t",condsegprob[k][t][j],expS[k][t][j]);
 					}
-//					for(l=0;l<LTYPES;l++){
-//						fprintf(outfile,"%f\t",expA[k][t][l]);
-//					}
-					//calculate estimated frequencies of allele 1 on X and Y
-//					fx=expA[k][t][0]*(1-F[k][t][JL_SEX1])+expA[k][t][1]*F[k][t][JL_SEX2]+expA[k][t][2];				
-//					fy=expA[k][t][0]+expA[k][t][2]*(1-F[k][t][JL_SEX3])+expA[k][t][3]*F[k][t][JL_SEX4];				
-//					fprintf(outfile,"%f %f\t",fx,fy);
 					fprintf(outfile,"%d\n",jmax);
 				}
 				else {
@@ -1255,9 +1232,6 @@ int main(int argc, char *argv[]) {
 				}
 			}
 			//		}
-		}
-		else {
-			fprintf(outfile,"\n");
 		}
 	}
 	
@@ -1275,6 +1249,7 @@ int main(int argc, char *argv[]) {
 	}
 	free(polysite);
 	free(npolysites);
+	free(geom_score);
 
 	return 0;
 	
