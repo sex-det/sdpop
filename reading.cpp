@@ -1,4 +1,7 @@
 #include "reading.h"
+#include <string>
+#include <vector>
+#include <cstdio>
 
 int NAME_LEN = 9000;
 
@@ -54,25 +57,26 @@ char int2DNA(int i)
 	}
 }
 
-int read_cnt2(FILE *fp, int namelen, int chromosomes, char **contig_p, int **npolysites_p, int ****polysite_p) 
+//int read_cnt2(FILE *fp, int namelen, int chromosomes, char **contig_p, int **npolysites_p, int ****polysite_p) 
+int read_cnt2(FILE *fp, int namelen, int chromosomes, std::vector<std::string>& contig, int **npolysites_p, int ****polysite_p) 
 //for reading cnt files that have the identity (A,T,C or G) of the alleles
 {
-	char *contig;
+//	std::vector<std::string> contig;
+//	char *contig;
+	char tcont[namelen];
 	int *npolysites,***polysite;
 	int CUR_MAX = 4095;
 	int NCONTIG_BATCH = 100;
 	int ncontigs_allocated,ncontigs;
-	char *line = (char*)calloc((size_t)CUR_MAX,sizeof(char));
-	char *tmpline = (char*)calloc((size_t)CUR_MAX,sizeof(char));
-	int count = 0; 
-	int length = 0;
+	std::string line;
 	char ch,nuc1,nuc2;
 	int i,k,l,firstcontig,t;
+	int c;
 	int ni,nI=0;
 
 	//reading counts from file 
 	l=0; //line number
-	ch='a';
+	c=0;
 	if((npolysites=(int *)malloc(sizeof(int)*NCONTIG_BATCH))==NULL) {
 		fprintf(stderr,"error in memory allocation\n");
 		exit(1);
@@ -81,33 +85,22 @@ int read_cnt2(FILE *fp, int namelen, int chromosomes, char **contig_p, int **npo
 		fprintf(stderr,"error in memory allocation\n");
 		exit(1);
 	}
-	if((contig=(char *)malloc(sizeof(char)*NCONTIG_BATCH*namelen))==NULL) { 
-		fprintf(stderr,"error in memory allocation\n");
-		exit(1);
-	}
+//	if((contig=(char *)malloc(sizeof(char)*NCONTIG_BATCH*namelen))==NULL) { 
+//		fprintf(stderr,"error in memory allocation\n");
+//		exit(1);
+//	}
 	ncontigs_allocated=NCONTIG_BATCH;
 	
 	firstcontig=1;
 	k=0;
 		
-	while (ch != EOF) { //loop through the file
-		ch='a';
-		count = 0;
-		length = 0;
-		while ( (ch != '\n') && (ch != EOF) ) { //loop through the line
-			if(count == CUR_MAX) { // time to expand (for unexepectedly large line lengths) ?
-				CUR_MAX *= 2; 
-				count = 0;
-				line = (char*)realloc(line, sizeof(char) * CUR_MAX); 
-				tmpline = (char*)realloc(tmpline, sizeof(char) * CUR_MAX); 
-			}
-			ch = getc(fp); // read from stream.
-			line[length] = ch;
-			length++;
-			count++;
+	while ((c = std::fgetc(fp)) != EOF) { //loop through the file
+		line="";
+		while ( (c != '\n') && (c != EOF) ) { //loop through the line
+			line+=char(c);
+			c = std::fgetc(fp);
 		}
-		line[length] = '\0';
-		if (length <= 1) { //empty line : suppose it's the end of the file
+		if (line.size() < 1) { //empty line : suppose it's the end of the file
 			break;
 		}
 		//We've read one line :
@@ -127,10 +120,10 @@ int read_cnt2(FILE *fp, int namelen, int chromosomes, char **contig_p, int **npo
 			//Start preparing to read a new contig
 			if ( k >= ncontigs_allocated ) {
 				ncontigs_allocated+=NCONTIG_BATCH;
-				if((contig=(char *)realloc(contig,sizeof(char)*ncontigs_allocated*namelen))==NULL) { 
-					fprintf(stderr,"error in memory allocation\n");
-					exit(1);
-				}	
+//				if((contig=(char *)realloc(contig,sizeof(char)*ncontigs_allocated*namelen))==NULL) { 
+//					fprintf(stderr,"error in memory allocation\n");
+//					exit(1);
+//				}	
 				if((polysite=(int ***)realloc(polysite,sizeof(int **)*ncontigs_allocated))==NULL) {
 					fprintf(stderr,"error in memory allocation\n");
 					exit(1);
@@ -140,11 +133,14 @@ int read_cnt2(FILE *fp, int namelen, int chromosomes, char **contig_p, int **npo
 					exit(1);
 				}		
 			}
-			if ( strlen(line) >= namelen ) {
+			if ( line.size() >= namelen ) {
 				fprintf(stderr,"Error: a contig name is too long (more than %d characters) on line %d.\n",namelen-1,l);
 				exit(1);
 			}
-			sscanf(line,">%s",&contig[k*namelen]);
+			sscanf(line.data(),">%s",tcont);
+			contig.push_back(tcont);
+			printf("%s\n",contig[k].data());
+//			sscanf(line.data(),">%s",&contig[k*namelen]);
 			//			printf("%s\n",&contig[k*namelen]);
 		}
 		else { //line contains counts
@@ -177,16 +173,16 @@ int read_cnt2(FILE *fp, int namelen, int chromosomes, char **contig_p, int **npo
 //					sscanf(line,"%*d\t%*d\t%*f\t%d\t%d\t%d\t%d\t%d\t%d\t",&polysite[k][t][4],&polysite[k][t][5],&polysite[k][t][6],&polysite[k][t][1],&polysite[k][t][2],&polysite[k][t][3]);
 //				}
 				if(chromosomes==XY){
-					if(sscanf(line,"%d\t%c%c\t%d\t%d\t%d\t%d\t%d\t%d\t",&polysite[k][t][0],&nuc1,&nuc2,&polysite[k][t][1],&polysite[k][t][2],&polysite[k][t][3],&polysite[k][t][4],&polysite[k][t][5],&polysite[k][t][6])!=9){
+					if(sscanf(line.data(),"%d\t%c%c\t%d\t%d\t%d\t%d\t%d\t%d\t",&polysite[k][t][0],&nuc1,&nuc2,&polysite[k][t][1],&polysite[k][t][2],&polysite[k][t][3],&polysite[k][t][4],&polysite[k][t][5],&polysite[k][t][6])!=9){
 						fprintf(stderr,"In readcnt2: Error reading line %d\n",l);
-						fprintf(stderr,"Line: %s\n",line);
+						fprintf(stderr,"Line: %s\n",line.data());
 						exit(1);
 					}
 				}
 				else {
-					if(sscanf(line,"%d\t%c%c\t%d\t%d\t%d\t%d\t%d\t%d\t",&polysite[k][t][0],&nuc1,&nuc2,&polysite[k][t][4],&polysite[k][t][5],&polysite[k][t][6],&polysite[k][t][1],&polysite[k][t][2],&polysite[k][t][3])!=9){
+					if(sscanf(line.data(),"%d\t%c%c\t%d\t%d\t%d\t%d\t%d\t%d\t",&polysite[k][t][0],&nuc1,&nuc2,&polysite[k][t][4],&polysite[k][t][5],&polysite[k][t][6],&polysite[k][t][1],&polysite[k][t][2],&polysite[k][t][3])!=9){
 						fprintf(stderr,"In readcnt2: Error reading line %d\n",l);
-						fprintf(stderr,"Line: %s\n",line);
+						fprintf(stderr,"Line: %s\n",line.data());
 						exit(1);
 					}
 				}
@@ -201,20 +197,17 @@ int read_cnt2(FILE *fp, int namelen, int chromosomes, char **contig_p, int **npo
 				}
 				t++;
 		}
-		memset(line, '\0', strlen(line)*(sizeof line));
+//		memset(line, '\0', strlen(line)*(sizeof line));
 	}
 //	fprintf(stdout,"%d sites (individuals * positions), error rate (reads2snp) = %f\n",gensite,1.-totgenprob/gensite);
 	
 	npolysites[k]=t;
 	ncontigs=k+1;
-		
-	//All reading has been done : clear memory.
-	free(tmpline);
-	free(line);
-	
+			
 	*npolysites_p=npolysites;
 	*polysite_p=polysite;
-	*contig_p=contig;
+//	contig_p=contig;
+//	*contig_p=contig;
 	
 	return ncontigs;
 }

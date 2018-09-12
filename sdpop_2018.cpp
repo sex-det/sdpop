@@ -10,6 +10,10 @@
 #include "reading.h"
 #include "calc.h"
 
+#include <string>
+#include <vector>
+
+
 double ***F; //vector containing allele frequencies per segregation type
 double *****P; //vector containing P matrices (per sex and segregation type)
 long double ***condsiteprob,***condsegprob; //conditional probabilities per site
@@ -527,7 +531,8 @@ int SITEprobs(int nj,long double *csp, long double *temp)
 int main(int argc, char *argv[]) {
 	
 	FILE *fp,*outfile;
-	char *contig;
+	std::vector<std::string> contig;
+//	char *contig;
 	int i,j,k,l,jl,t,it,s,g,gp;
 	int ***polysite;
 	int *npolysites;
@@ -659,7 +664,7 @@ int main(int argc, char *argv[]) {
 	fprintf(stdout,"Criterium for convergence: delta < %e\n",stop);
 	fprintf(stdout,"\n");
 	fprintf(stdout,"Reading...\n");
-	ncontigs=read_cnt2(fp,NAME_LEN,chromosomes,&contig,&npolysites,&polysite);
+	ncontigs=read_cnt2(fp,NAME_LEN,chromosomes,contig,&npolysites,&polysite);
 	fclose(fp);
 	
 	fprintf(stdout,"Found %d contigs\n",ncontigs);
@@ -1151,7 +1156,8 @@ int main(int argc, char *argv[]) {
 
 	for (k=0;k<ncontigs;k++) {
 		if(npolysites[k]>0) {
-			fprintf(outfile,">%s\t%d",&contig[k*NAME_LEN],npolysites[k]);
+//			fprintf(outfile,">%s\t%d",&contig[k*NAME_LEN],npolysites[k]);
+			fprintf(outfile,">%s\t%d",contig[k].data(),npolysites[k]);
 			ni=0;
 			for (t=0; t<npolysites[k]; t++){
 				for (i=1; i<7; i++) {
@@ -1258,7 +1264,7 @@ int main(int argc, char *argv[]) {
 	fclose(outfile);
 
 	freeEM(ncontigs, npolysites);
-	free(contig);
+//	free(contig);
 	for(k=0;k<ncontigs;k++) {
 		if(npolysites[k]>0) {
 			for(t=0; t<npolysites[k]; t++){
