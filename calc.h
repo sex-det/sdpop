@@ -1,3 +1,5 @@
+#pragma once
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -9,7 +11,7 @@
 #define SEXES 2
 //number of biological segregation types
 enum SegregationType {
-	J_AUTO, J_HAPLOID, J_PARA, J_HEMI, J_SEX, JTYPES
+	J_AUTO, J_HAPLOID, J_PARA, J_HEMI, J_SEX, JTYPES, _Size
 };
 #define JLTYPES 9 //number of detailed segregation types
 #define JL_AUTO 0
@@ -30,12 +32,6 @@ enum SegregationType {
 #define N11 1
 #define N12 2
 #define N22 3
-#define N11F 1
-#define N12F 2
-#define N22F 3
-#define N11M 4
-#define N12M 5
-#define N22M 6
 #define XY 1
 #define ZW 2
 #define DIP 0 //diploid only
@@ -47,8 +43,10 @@ double intpow(double x,int y);
 double* vectorize_d(double x0, double x1, double x2);
 unsigned int* vectorize_ui(unsigned int x0, unsigned int x1, unsigned int x2);
 double* errormult(double ematrix[3][3], double x[3]);
-void CondSiteProbs(int ncontigs, int *npolysites, int ***polysite, double Q[3][3], double *****P, long double ***condsiteprob);
-void CondSegProbs(int ncontigs, int *npolysites, double *rho, long double ***condsiteprob, long double ***condsegprob);
+//void CondSiteProbs(int ncontigs, int *npolysites, int ***polysite, double Q[3][3], double *****P, long double ***condsiteprob);
+//void CondSegProbs(int ncontigs, int *npolysites, double *rho, long double ***condsiteprob, long double ***condsegprob);
+void CondSiteProbs(std::vector<Contig>& contigs, double Q[3][3], double *****P, long double ***condsiteprob);
+void CondSegProbs(std::vector<Contig>& contigs, double *rho, long double ***condsiteprob, long double ***condsegprob);
 void horner(int length, int lmax, long double* array, double* param, double* result);
 void loghorner(int length, int lmax, long double* logarray, double* param, double* result);
 void calcQ(double m33[3][3], double e0, double e1, double e2);

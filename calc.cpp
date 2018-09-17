@@ -1,3 +1,4 @@
+#include "types.h"
 #include "calc.h"
 
 double intpow(double x,int y){
@@ -52,15 +53,16 @@ double* errormult(double ematrix[3][3], double x[3]) {
 	return vector;
 }
 
-void CondSiteProbs(int ncontigs, int *npolysites, int ***polysite, double Q[3][3], double *****P, long double ***condsiteprob)
+void CondSiteProbs(std::vector<Contig>& contigs, double Q[3][3], double *****P, long double ***condsiteprob)
 {
 	int k,t,jl,s,g,gp;
 //	unsigned int *nmulti;
 //	double *pmulti, *emulti;
 	double tempgp;
 	
-	for (k=0;k<ncontigs;k++) {
-		for(t=0;t<npolysites[k];t++){
+	for (k=0;k<contigs.size();k++) {
+		Contig & current_contig = contigs[k];
+		for(t=0;t<current_contig.snps.size();t++){
 			for(jl=0;jl<JLTYPES;jl++) {
 				//				nmulti=vectorize_ui(polysite[k][t][N11F],polysite[k][t][N12F],polysite[k][t][N22F]);
 				//				pmulti=vectorize_d(P[k][t][FEMALE][jl][0],P[k][t][FEMALE][jl][1],P[k][t][FEMALE][jl][2]);
@@ -81,15 +83,15 @@ void CondSiteProbs(int ncontigs, int *npolysites, int ***polysite, double Q[3][3
 						for(gp=0;gp<3;gp++){
 							tempgp+=P[k][t][s][jl][gp]*Q[g][gp];
 						}
-						condsiteprob[k][t][jl]*=intpow(tempgp,polysite[k][t][1+3*s+g]);
+						condsiteprob[k][t][jl]*=intpow(tempgp,current_contig.snps[t].genotypes_by_sex[g+3*s]);
 					}
 				}
 				if(isnan(condsiteprob[k][t][jl])){
-					fprintf(stdout,"NaN produced (CondSiteProbs): contig %d, site %d, type %d: %Lf\n",k,polysite[k][t][0],jl,condsiteprob[k][t][jl]);
+					fprintf(stdout,"NaN produced (CondSiteProbs): contig %d, site %d, type %d: %Lf\n",k,current_contig.snps[t].position,jl,condsiteprob[k][t][jl]);
 					exit(1);
 				}
 				else if(isinf(condsiteprob[k][t][jl])){
-					fprintf(stdout,"Inf produced (CondSiteProbs): contig %d, site %d, type %d: %Lf\n",k,polysite[k][t][0],jl,condsiteprob[k][t][jl]);
+					fprintf(stdout,"Inf produced (CondSiteProbs): contig %d, site %d, type %d: %Lf\n",k,current_contig.snps[t].position,jl,condsiteprob[k][t][jl]);
 					for(s=0;s<2;s++){
 						fprintf(stdout,"s=%d\n",s);
 						for(g=0;g<3;g++){
@@ -105,12 +107,13 @@ void CondSiteProbs(int ncontigs, int *npolysites, int ***polysite, double Q[3][3
 	}
 }
 
-void CondSegProbs(int ncontigs, int *npolysites, double *rho, long double ***condsiteprob, long double ***condsegprob)
+void CondSegProbs(std::vector<Contig>& contigs, double *rho, long double ***condsiteprob, long double ***condsegprob)
 {
 	int k,t,l,j;
 	
-	for (k=0;k<ncontigs;k++) {
-		for(t=0;t<npolysites[k];t++){
+	for (k=0;k<contigs.size();k++) {
+		Contig & current_contig = contigs[k];
+		for(t=0;t<current_contig.snps.size();t++){
 			condsegprob[k][t][J_AUTO]=condsiteprob[k][t][JL_AUTO];
 			condsegprob[k][t][J_HAPLOID]=condsiteprob[k][t][JL_HAPLOID];
 			condsegprob[k][t][J_PARA]=(long double)0.5*(condsiteprob[k][t][JL_PARA1]+condsiteprob[k][t][JL_PARA2]);	

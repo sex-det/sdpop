@@ -22,11 +22,13 @@ double ***expS,***expA,**expR,******expTG;
 
 extern int NAME_LEN;
 
-void initEM(int ncontigs, int *npolysites, int ***polysite) {
+void initEM(std::vector<Contig>& contigs) {
 	int n11f,n12f,n22f,n11m,n12m,n22m,nfem,nmal,ntot;
 	int k,t,jl,s,g;
+	int ncontigs,npolysites;
 	double f;
 	
+	ncontigs=contigs.size();
 	//P : a npolysites x 2 x 4 x 3 matrix
 	//P[kt][s][j][gp] : 
 	//kt: sites
@@ -72,29 +74,30 @@ void initEM(int ncontigs, int *npolysites, int ***polysite) {
 	}
 	
 	
-	for (k=0;k<ncontigs;k++) {
-		if (npolysites[k] > 0) {
-			if((P[k]=(double ****)calloc((size_t)npolysites[k],sizeof(double ***)))==NULL) { 
+	for (k=0;k<contigs.size();k++) {
+		Contig & current_contig = contigs[k];
+		if((npolysites=current_contig.snps.size())>0) {
+			if((P[k]=(double ****)calloc((size_t)npolysites,sizeof(double ***)))==NULL) { 
 				fprintf(stderr,"error in memory allocation\n");
 				exit(1);
 			}
-			if((F[k]=(double **)calloc((size_t)npolysites[k],sizeof(double *)))==NULL) { 
+			if((F[k]=(double **)calloc((size_t)npolysites,sizeof(double *)))==NULL) { 
 				fprintf(stderr,"error in memory allocation\n");
 				exit(1);
 			}
-			if((expS[k]=(double **)calloc((size_t)npolysites[k],sizeof(double *)))==NULL) { 
+			if((expS[k]=(double **)calloc((size_t)npolysites,sizeof(double *)))==NULL) { 
 				fprintf(stderr,"error in memory allocation\n");
 				exit(1);
 			}
-			if((expA[k]=(double **)calloc((size_t)npolysites[k],sizeof(double *)))==NULL) { 
+			if((expA[k]=(double **)calloc((size_t)npolysites,sizeof(double *)))==NULL) { 
 				fprintf(stderr,"error in memory allocation\n");
 				exit(1);
 			}
-			if((condsiteprob[k]=(long double **)calloc((size_t)npolysites[k],sizeof(long double *)))==NULL) { 
+			if((condsiteprob[k]=(long double **)calloc((size_t)npolysites,sizeof(long double *)))==NULL) { 
 				fprintf(stderr,"error in memory allocation\n");
 				exit(1);
 			}
-			if((condsegprob[k]=(long double **)calloc((size_t)npolysites[k],sizeof(long double *)))==NULL) { 
+			if((condsegprob[k]=(long double **)calloc((size_t)npolysites,sizeof(long double *)))==NULL) { 
 				fprintf(stderr,"error in memory allocation\n");
 				exit(1);
 			}
@@ -106,11 +109,11 @@ void initEM(int ncontigs, int *npolysites, int ***polysite) {
 				fprintf(stderr,"error in memory allocation\n");
 				exit(1);
 			}
-			if((expTG[k]=(double *****)calloc((size_t)npolysites[k],sizeof(double ****)))==NULL) { 
+			if((expTG[k]=(double *****)calloc((size_t)npolysites,sizeof(double ****)))==NULL) { 
 				fprintf(stderr,"error in memory allocation\n");
 				exit(1);
 			}
-			for (t=0; t<npolysites[k]; t++){
+			for (t=0; t<npolysites; t++){
 				if((P[k][t]= (double ***)calloc((size_t)SEXES,sizeof(double **)))==NULL) { 
 					fprintf(stderr,"error in memory allocation\n");
 					exit(1);
@@ -167,13 +170,13 @@ void initEM(int ncontigs, int *npolysites, int ***polysite) {
 				}
 			}							
 			
-			for (t=0;t<npolysites[k];t++) {
-				n11f=polysite[k][t][N11F]; //female counts
-				n12f=polysite[k][t][N12F]; 
-				n22f=polysite[k][t][N22F]; 			
-				n11m=polysite[k][t][N11M]; //male counts
-				n12m=polysite[k][t][N12M]; 
-				n22m=polysite[k][t][N22M]; 			
+			for (t=0;t<npolysites;t++) {
+				n11f=current_contig.snps[t].genotypes_by_sex[N11F]; //female counts
+				n12f=current_contig.snps[t].genotypes_by_sex[N12F]; 
+				n22f=current_contig.snps[t].genotypes_by_sex[N22F]; 			
+				n11m=current_contig.snps[t].genotypes_by_sex[N11M]; //male counts
+				n12m=current_contig.snps[t].genotypes_by_sex[N12M]; 
+				n22m=current_contig.snps[t].genotypes_by_sex[N22M]; 			
 				
 				nfem=n11f+n12f+n22f;
 				nmal=n11m+n12m+n22m;
@@ -292,11 +295,14 @@ void initEM(int ncontigs, int *npolysites, int ***polysite) {
 	}
 }
 
-void freeEM(int ncontigs, int *npolysites) {
+void freeEM(std::vector<Contig>& contigs) {
 	int k,t,s,j,g;
+	int npolysites;
 	
-	for(k=0; k<ncontigs; k++){
-		for (t=0; t<npolysites[k]; t++){
+	for(k=0; k<contigs.size(); k++){
+		Contig & current_contig = contigs[k];
+		npolysites=current_contig.snps.size();
+		for (t=0; t<npolysites; t++){
 			for(s=0;s<SEXES;s++){
 				for(j=0;j<JTYPES;j++){
 					free(P[k][t][s][j]);
@@ -358,24 +364,26 @@ void pisort(int n, long double *pi, int *piorder) {
 }
 
 
-long double totalcontigloglik(int ncontigs, int *npolysites, double *pi, double *rho) {
+long double totalcontigloglik(std::vector<Contig>& contigs, double *pi, double *rho) {
 	long double loglik=0;
 	long double suml,sumj,temp[JTYPES];
 	int t,j,k,l;
 	
-	for (k=0;k<ncontigs;k++) {
+	for (k=0;k<contigs.size();k++) {
+		Contig & current_contig = contigs[k];
+		int npolysites=current_contig.snps.size();
 		sumj=0;
 		for(j=0;j<JTYPES;j++) {
 			if(pi[j]>GSL_DBL_MIN){
 				temp[j]=log(pi[j]);
 				switch (j) {
 				case J_AUTO : case J_HAPLOID :
-					for(t=0;t<npolysites[k];t++){
+					for(t=0;t<npolysites;t++){
 						temp[j]+=logl(condsiteprob[k][t][j]);
 					}
 					break;
 				case J_PARA :
-					for(t=0;t<npolysites[k];t++){
+					for(t=0;t<npolysites;t++){
 						suml=0;
 						for(l=0;l<2;l++){
 							suml+=(long double)0.5*condsiteprob[k][t][JL_PARA1+l];
@@ -384,12 +392,12 @@ long double totalcontigloglik(int ncontigs, int *npolysites, double *pi, double 
 					}
 					break;
 				case J_HEMI :
-					for(t=0;t<npolysites[k];t++){
+					for(t=0;t<npolysites;t++){
 						temp[j]+=logl(condsiteprob[k][t][JL_HEMI]);
 					}
 					break;
 				case J_SEX :
-					for(t=0;t<npolysites[k];t++){
+					for(t=0;t<npolysites;t++){
 						suml=0;
 						for(l=0;l<LTYPES;l++){
 							suml+=(long double)rho[l]*condsiteprob[k][t][JL_SEX1+l];
@@ -415,13 +423,14 @@ long double totalcontigloglik(int ncontigs, int *npolysites, double *pi, double 
 	return loglik;
 }
 
-long double totalsiteloglik(int ncontigs, int *npolysites, double *pi, double *rho) {
+long double totalsiteloglik(std::vector<Contig>& contigs, double *pi, double *rho) {
 	long double loglik=0;
 	long double sumj,sum3;
 	int t,j,k,l;
 	
-	for (k=0;k<ncontigs;k++) {
-		for(t=0;t<npolysites[k];t++){
+	for (k=0;k<contigs.size();k++) {
+		Contig & current_contig = contigs[k];
+		for(t=0;t<current_contig.snps.size();t++){
 			sumj=0;
 			for(j=0;j<JTYPES;j++) {
 				switch (j) {
@@ -449,13 +458,14 @@ long double totalsiteloglik(int ncontigs, int *npolysites, double *pi, double *r
 	return loglik;
 }
 
-long double condsiteexpect(int ncontigs, int *npolysites, int ***polysite, double *pi, double *rho, double Q[3][3])
+long double condsiteexpect(std::vector<Contig>& contigs, double *pi, double *rho, double Q[3][3])
 {
 	long double tempgs,tempjl,tempgp,logexp=0;
 	int k,t,s,jl,j,l,g,gp;
 	
-	for (k=0;k<ncontigs;k++) {
-		for(t=0;t<npolysites[k];t++){
+	for (k=0;k<contigs.size();k++) {
+		Contig & current_contig = contigs[k];
+		for(t=0;t<current_contig.snps.size();t++){
 			tempgs=0;
 			for(s=0;s<2;s++){
 				for(g=0;g<3;g++){
@@ -474,7 +484,7 @@ long double condsiteexpect(int ncontigs, int *npolysites, int ***polysite, doubl
 							tempjl+=tempgp*expS[k][t][jl]*expA[k][t][jl-JL_SEX1];
 						}
 					}					
-				tempgs+=polysite[k][t][1+g+3*s]*tempjl;
+				tempgs+=current_contig.snps[t].genotypes_by_sex[g+3*s]*tempjl;
 				}
 			}
 			logexp+=tempgs;
@@ -534,8 +544,7 @@ int main(int argc, char *argv[]) {
 	std::vector<std::string> contig;
 //	char *contig;
 	int i,j,k,l,jl,t,it,s,g,gp;
-	int ***polysite;
-	int *npolysites;
+	int npolysites;
 	int ncontigs,totsites;
 	double sumET,weights;     
 	double pi[JTYPES],rho[LTYPES],oldpi[JTYPES],oldrho[LTYPES],sumpi,sumrho;
@@ -554,6 +563,8 @@ int main(int argc, char *argv[]) {
 	double U[3][3],Usim,Udis;
 	int ni,nI=0,npi=1,sites_individuals,npar;
 	double *geom_score;
+	
+	std::vector<Contig> contigs;
 	
 //	feenableexcept(FE_INVALID & FE_OVERFLOW);
 //	feenableexcept(FE_ALL_EXCEPT & ~FE_INEXACT);
@@ -665,15 +676,17 @@ int main(int argc, char *argv[]) {
 	fprintf(stdout,"Criterium for convergence: delta < %e\n",stop);
 	fprintf(stdout,"\n");
 	fprintf(stdout,"Reading...\n");
-	ncontigs=read_cnt2(fp,NAME_LEN,chromosomes,contig,&npolysites,&polysite);
+	ncontigs=read_cnt2(fp,NAME_LEN,chromosomes,contigs);
 	fclose(fp);
 	
 	fprintf(stdout,"Found %d contigs\n",ncontigs);
 	totsites=0;
 	nnoncontigs=0;
-	for (k=0;k<ncontigs;k++) {
-		totsites+=npolysites[k];
-		if(npolysites[k]==0) {
+	for (k=0;k<contigs.size();k++) {
+		Contig & current_contig = contigs[k];
+		npolysites=current_contig.snps.size();
+		totsites+=npolysites;
+		if(npolysites==0) {
 			nnoncontigs++;
 		}
 	}
@@ -686,7 +699,7 @@ int main(int argc, char *argv[]) {
 	//EM algorithm
 	
 	// Allocation
-	initEM(ncontigs, npolysites, polysite);
+	initEM(contigs);
 	
 	// Initialize parameters
 /*	for(j=0;j<JTYPES;j++) {
@@ -718,9 +731,9 @@ int main(int argc, char *argv[]) {
 	calcQ(Q,e,e,e);		
 	
 	// Calculate conditional probabilities per site
-	CondSiteProbs(ncontigs,npolysites,polysite,Q,P,condsiteprob);
-	CondSegProbs(ncontigs,npolysites,rho,condsiteprob,condsegprob);
-	k=ncontigs-1;
+	CondSiteProbs(contigs,Q,P,condsiteprob);
+	CondSegProbs(contigs,rho,condsiteprob,condsegprob);
+//	k=ncontigs-1;
 //	for(t=0;t<npolysites[k];t++){
 //		for (i=0; i<7; i++) {
 //			fprintf(stdout,"%d\t",polysite[k][t][i]);
@@ -734,10 +747,10 @@ int main(int argc, char *argv[]) {
 	
 	//initial likelihood
 	if (mode == SITE) {
-		loglik=totalsiteloglik(ncontigs,npolysites,pi,rho);
+		loglik=totalsiteloglik(contigs,pi,rho);
 	}
 	else {
-		loglik=totalcontigloglik(ncontigs,npolysites,pi,rho);
+		loglik=totalcontigloglik(contigs,pi,rho);
 	}
 	fprintf(stdout,"Initial values:\npi:");
 	for(j=0;j<JTYPES;j++) {
@@ -761,45 +774,46 @@ int main(int argc, char *argv[]) {
 		fprintf(stdout,"Iteration %d: ",it);
 
 		//E-step
-		for (k=0;k<ncontigs;k++) {
-			if(npolysites[k]>0) {
-			// XY detailed types
-			if(pi[J_SEX]>GSL_DBL_MIN){
-				for(t=0;t<npolysites[k];t++){
-					maxl=-INFINITY;
-					lmax=-1;
-					for(l=0;l<LTYPES;l++) {
-						templ[l]=logl(condsiteprob[k][t][JL_SEX1+l]);
-						//templ[l]=condsiteprob[k][t][j+l];
-						if(templ[l]>maxl){
-							maxl=templ[l];
-							lmax=l;
+		for (k=0;k<contigs.size();k++) {
+			Contig & current_contig = contigs[k];
+			if((npolysites=current_contig.snps.size())>0) {
+				// XY detailed types
+				if(pi[J_SEX]>GSL_DBL_MIN){
+					for(t=0;t<npolysites;t++){
+						maxl=-INFINITY;
+						lmax=-1;
+						for(l=0;l<LTYPES;l++) {
+							templ[l]=logl(condsiteprob[k][t][JL_SEX1+l]);
+							//templ[l]=condsiteprob[k][t][j+l];
+							if(templ[l]>maxl){
+								maxl=templ[l];
+								lmax=l;
+							}
 						}
+						loghorner(LTYPES,lmax,templ,rho,expA[k][t]);				
+						//horner(LTYPES,lmax,templ,rho,expA[k][t]);				
 					}
-					loghorner(LTYPES,lmax,templ,rho,expA[k][t]);				
-					//horner(LTYPES,lmax,templ,rho,expA[k][t]);				
 				}
-			}
 			//segregation types
 			if (mode==SITE) {		//site-wise
-				for(t=0;t<npolysites[k];t++){
+				for(t=0;t<npolysites;t++){
 					//Expectations of segregation types
 					jmax=SITEprobs(JTYPES,condsegprob[k][t],temp);
 					loghorner(JTYPES,jmax,temp,pi,expS[k][t]);			
 					for(j=0;j<JTYPES;j++){
 						if(isnan(expS[k][t][j])){
-								fprintf(stdout,"NaN produced (expS): contig %d, site %d, type %d: %f\n",k,polysite[k][t][0],j,expS[k][t][j]);
+							fprintf(stdout,"NaN produced (expS): contig %d, site %d, type %d: %f\n",k,current_contig.snps[t].position,j,expS[k][t][j]);
 								exit(1);
 						}
 						else if(isinf(expS[k][t][j])){
-							fprintf(stdout,"Inf produced (expS): contig %d, site %d, type %d: %f\n",k,polysite[k][t][0],j,expS[k][t][j]);
+							fprintf(stdout,"Inf produced (expS): contig %d, site %d, type %d: %f\n",k,current_contig.snps[t].position,j,expS[k][t][j]);
 						}
 					}
 					//					horner(JTYPES,jmax,temp,pi,expS[k][t]);
 				}
 			}
 			else { // mode == CONTIG
-				jmax=contigCONTIGprobs(JTYPES,npolysites[k],condsegprob[k],contigllik[k]);
+				jmax=contigCONTIGprobs(JTYPES,npolysites,condsegprob[k],contigllik[k]);
 				loghorner(JTYPES,jmax,contigllik[k],pi,expR[k]);
 //				horner(JTYPES,jmax,temp,pi,expR[k]);
 //				maxj=-1.;
@@ -817,8 +831,8 @@ int main(int argc, char *argv[]) {
 //				horner(JTYPES,jmax,temp,pi,expR[k]);
 					for(j=0;j<JTYPES;j++){
 						if(isnan(expR[k][j])){
-								fprintf(stdout,"NaN produced (expR): contig %d, type %d: %f\n",k,j,expR[k][j]);
-								exit(1);
+							fprintf(stdout,"NaN produced (expR): contig %d, type %d: %f\n",k,j,expR[k][j]);
+							exit(1);
 						}
 						else if(isinf(expR[k][j])){
 							fprintf(stdout,"Inf produced (expR): contig %d, type %d: %f\n",k,j,expR[k][j]);
@@ -827,7 +841,7 @@ int main(int argc, char *argv[]) {
 			}
 			//Expectations of true genotypes (independent of site- or contig-wise mode)
 			if(errormodel==ERRORS) {
-				for(t=0;t<npolysites[k];t++){
+				for(t=0;t<npolysites;t++){
 					for(jl=0;jl<JLTYPES;jl++) {
 						for(s=0;s<2;s++){
 							for(g=0;g<3;g++){
@@ -845,8 +859,8 @@ int main(int argc, char *argv[]) {
 								horner(3,gpmax,temp,Q[g],expTG[k][t][s][jl][g]);						
 								for(gp=0;gp<3;gp++){
 									if(isnan(expTG[k][t][s][jl][g][gp])){
-											fprintf(stdout,"NaN produced (expTG): k=%d t=%d s=%d jl=%d g=%d gp=%d: %f\n",k,t,s,jl,g,gp,expR[k][j]);
-											exit(1);
+										fprintf(stdout,"NaN produced (expTG): k=%d t=%d s=%d jl=%d g=%d gp=%d: %f\n",k,t,s,jl,g,gp,expR[k][j]);
+										exit(1);
 									}
 									else if(isinf(expTG[k][t][s][jl][g][gp])){
 										fprintf(stdout,"Inf produced (expTG): k=%d t=%d s=%d jl=%d g=%d gp=%d: %f\n",k,t,s,jl,g,gp,expR[k][j]);
@@ -872,12 +886,13 @@ int main(int argc, char *argv[]) {
 				oldpi[j]=pi[j];
 				sumET=0;
 				totsites=0;
-				for (k=0;k<ncontigs;k++) {
-					if(npolysites[k]>0){
-					for(t=0;t<npolysites[k];t++){
-						sumET+=expS[k][t][j];
-					}
-					totsites+=npolysites[k];
+				for (k=0;k<contigs.size();k++) {
+					Contig & current_contig = contigs[k];
+					if((npolysites=current_contig.snps.size())>0) {
+						for (t=0; t<npolysites; t++){
+							sumET+=expS[k][t][j];
+						}
+						totsites+=npolysites;
 					}
 				}
 				pi[j]=(long double)sumET/(long double)totsites;
@@ -891,8 +906,9 @@ int main(int argc, char *argv[]) {
 			sumpi=0;
 			for(j=0;j<JTYPES;j++){ 
 				sumET=0;
-				for (k=0;k<ncontigs;k++) {
-					if (npolysites[k]>0) {					
+				for (k=0;k<contigs.size();k++) {
+					Contig & current_contig = contigs[k];
+					if((npolysites=current_contig.snps.size())>0) {
 						sumET+=expR[k][j];
 					}
 				}
@@ -907,9 +923,11 @@ int main(int argc, char *argv[]) {
 		}
 		sumET=0;
 		weights=0;
-		for (k=0;k<ncontigs;k++) {
-			if (npolysites[k]>0) {					
-				for(t=0;t<npolysites[k];t++){
+
+		for (k=0;k<contigs.size();k++) {
+			Contig & current_contig = contigs[k];
+			if((npolysites=current_contig.snps.size())>0) {
+				for (t=0; t<npolysites; t++){
 					if(mode==SITE){
 						sumET+=(expA[k][t][0]+expA[k][t][1])*expS[k][t][J_SEX];
 						weights+=expS[k][t][J_SEX];
@@ -941,9 +959,10 @@ int main(int argc, char *argv[]) {
 				//				printf("\n");
 				for(gp=0;gp<3;gp++){
 					U[g][gp]=0;
-					for (k=0;k<ncontigs;k++) {
-						if(npolysites[k]>0){
-							for(t=0;t<npolysites[k];t++){
+					for (k=0;k<contigs.size();k++) {
+						Contig & current_contig = contigs[k];
+						if((npolysites=current_contig.snps.size())>0) {
+							for (t=0; t<npolysites; t++){
 								for(s=0;s<2;s++) {
 									temp[s]=0;
 									for(j=0;j<JTYPES;j++) {
@@ -984,7 +1003,7 @@ int main(int argc, char *argv[]) {
 											break;
 										}
 									}
-									temp[s]*=(long double)polysite[k][t][1+g+3*s];
+									temp[s]*=(long double)current_contig.snps[t].genotypes_by_sex[g+3*s];
 								}
 								U[g][gp]+=temp[0]+temp[1];
 							}
@@ -1057,16 +1076,16 @@ int main(int argc, char *argv[]) {
 		}
 		
 		// Calculate conditional probabilities per site
-		CondSiteProbs(ncontigs,npolysites,polysite,Q,P,condsiteprob);
-		CondSegProbs(ncontigs,npolysites,rho,condsiteprob,condsegprob);
+		CondSiteProbs(contigs,Q,P,condsiteprob);
+		CondSegProbs(contigs,rho,condsiteprob,condsegprob);
 
 		//new log-likelihood
 		oldloglik=loglik;
 		if(mode == SITE){
-			loglik=totalsiteloglik(ncontigs,npolysites,pi,rho);
+			loglik=totalsiteloglik(contigs,pi,rho);
 		}
 		else {
-			loglik=totalcontigloglik(ncontigs,npolysites,pi,rho);
+			loglik=totalcontigloglik(contigs,pi,rho);
 		}
 		fprintf(stdout,", log-likelihood: %Lf\n",loglik);
 
@@ -1100,26 +1119,29 @@ int main(int argc, char *argv[]) {
 	fprintf(outfile,", BIC (sites): %Lf",-2.*loglik+npar*log(totsites));
 	fprintf(outfile,", BIC (contigs): %Lf",-2.*loglik+npar*log(ncontigs-nnoncontigs));
 	sites_individuals=0;
-	for (k=0;k<ncontigs;k++) {
-		for (t=0; t<npolysites[k]; t++){
-			for (i=1; i<7; i++) {
-				sites_individuals+=polysite[k][t][i];
+	for (k=0;k<contigs.size();k++) {
+		Contig & current_contig = contigs[k];
+		npolysites=current_contig.snps.size();
+		for (t=0; t<npolysites; t++){
+			for (i=0; i<6; i++) {
+				sites_individuals+=current_contig.snps[t].genotypes_by_sex[i];
 			}			
 		}
 	}
 	fprintf(outfile,", BIC (sites*individuals): %Lf\n",-2.*loglik+npar*log(sites_individuals));
 
-	for (k=0;k<ncontigs;k++) {
+	for (k=0;k<contigs.size();k++) {
+		Contig & current_contig = contigs[k];
 		//calculate likelihoods and posterior probabilities per contig 
-			if(npolysites[k]>0) {
+			if((npolysites=current_contig.snps.size())>0) {
 				if (mode == SITE ) { //calculate mean posterior
 					for(j=0;j<JTYPES;j++) {
 						sumET=0;
-						for (t=0; t<npolysites[k]; t++){
+						for (t=0; t<npolysites; t++){
 							sumET+=expS[k][t][j];
 							//						sumET+=log(condsegprob[k][t][j]/(condsegprob[k][t][bmin[k][t]]));
 						}
-						expR[k][j]=sumET/npolysites[k];
+						expR[k][j]=sumET/npolysites;
 					}
 				}
 				//calculate geometric mean scores
@@ -1127,10 +1149,10 @@ int main(int argc, char *argv[]) {
 				jmax=-1;
 				for(j=0;j<JTYPES;j++) {
 					sumL=0;
-					for (t=0; t<npolysites[k]; t++){
+					for (t=0; t<npolysites; t++){
 						sumL+=log(condsegprob[k][t][j]);
 					}
-					temp[j]=sumL/npolysites[k];
+					temp[j]=sumL/npolysites;
 					if(expl(temp[j])>pmax){
 							pmax=expl(temp[j]);
 							jmax=j;
@@ -1139,14 +1161,14 @@ int main(int argc, char *argv[]) {
 				loghorner(JTYPES,jmax,temp,pi,geom_score);
 
 //			fprintf(outfile,">%s\t%d",&contig[k*NAME_LEN],npolysites[k]);
-			fprintf(outfile,">%s\t%d",contig[k].data(),npolysites[k]);
+			fprintf(outfile,">%s\t%d",contigs[k].name.data(),npolysites);
 			ni=0;
-			for (t=0; t<npolysites[k]; t++){
-				for (i=1; i<7; i++) {
-					ni+=polysite[k][t][i];
+			for (t=0; t<npolysites; t++){
+				for (i=0; i<6; i++) {
+					ni+=current_contig.snps[t].genotypes_by_sex[i];
 				}
 			}
-			fprintf(outfile,"\t%f",(double)ni/(double)npolysites[k]);
+			fprintf(outfile,"\t%f",(double)ni/(double)npolysites);
 				pmax=0.0;
 				gmax=0.0;
 				jmax=-1;
@@ -1167,11 +1189,11 @@ int main(int argc, char *argv[]) {
 //			fprintf(outfile,"\t%f\n",zscore(k,npolysites[k],polysite[k],rho,Q,lmax,1000,P[k],condsegprob[k]));			
 			fprintf(outfile,"\t%d/%d\n",jmax,lmax);
 			
-			for (t=0; t<npolysites[k]; t++){
-				fprintf(outfile,"%d\t",polysite[k][t][0]);
-				fprintf(outfile,"%c%c\t",int2DNA(polysite[k][t][7]),int2DNA(polysite[k][t][8]));			
-				for (i=1; i<7; i++) {
-					fprintf(outfile,"%d\t",polysite[k][t][i]);
+			for (t=0; t<npolysites; t++){
+				fprintf(outfile,"%d\t",current_contig.snps[t].position);
+				fprintf(outfile,"%c%c\t",int2DNA(current_contig.snps[t].alleles[0]),int2DNA(current_contig.snps[t].alleles[1]));			
+				for (i=0; i<7; i++) {
+					fprintf(outfile,"%d\t",current_contig.snps[t].genotypes_by_sex[i]);
 				}
 				//calculate estimated frequencies of allele 1 on X and Y
 				//first method: fx and fy correspond to those matching with the most probable XY segregation subtype
@@ -1236,19 +1258,19 @@ int main(int argc, char *argv[]) {
 	}
 	
 	fclose(outfile);
-
-	freeEM(ncontigs, npolysites);
+	
+	freeEM(contigs);
 //	free(contig);
-	for(k=0;k<ncontigs;k++) {
-		if(npolysites[k]>0) {
-			for(t=0; t<npolysites[k]; t++){
-				free(polysite[k][t]);
-			}
-			free(polysite[k]);
-		}
-	}
-	free(polysite);
-	free(npolysites);
+//	for(k=0;k<ncontigs;k++) {
+//		if(npolysites[k]>0) {
+//			for(t=0; t<npolysites[k]; t++){
+//				free(polysite[k][t]);
+//			}
+//			free(polysite[k]);
+//		}
+//	}
+//	free(polysite);
+//	free(npolysites);
 	free(geom_score);
 
 	return 0;
