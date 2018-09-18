@@ -10,8 +10,8 @@ sdpop_perm: sdpop_perm.c
 	$(CC) -Wall -o sdpop_perm -lm sdpop_perm.c
 sdpop_nonpar: sdpop_nonpar.c
 	$(CC) -Wall -lm -o sdpop_nonpar sdpop_nonpar.c
-popsum: popsum.c reading.o 
-	$(CC) -Wall -o popsum -lm reading.o popsum.c
+popsum: popsum.cpp reading.o 
+	$(CXX) -Wall -o popsum -lm reading.o popsum.cpp
 readgen: readgen.c
 	$(CC) -Wall -o readgen -lgsl -lgslcblas -lm readgen.c
 ms_simul: ms_simul.c
