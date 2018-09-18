@@ -8,12 +8,6 @@
 #define N11 1
 #define N12 2
 #define N22 3
-#define N11F 1
-#define N12F 2
-#define N22F 3
-#define N11M 4
-#define N12M 5
-#define N22M 6
 #define READS2SNP 1
 #define GBS_FILTERED 2
 #define VCF 3
@@ -61,16 +55,18 @@ char **parsenames(char *string,int *nind,int maxlength) {
 	return names;
 }
 
-int **polyfilter(int npos, int nind, char *genotypes, int *sex, int *npolysites, int *n3, int *n4, double *theta) {//number of positions and individuals,
+Contig polyfilter(char *name, const std::vector<int> sites, int npos, int nind, char *genotypes, int *sex, int *n3, int *n4, double *theta) {//number of positions and individuals,
 	// genotype matrix, pointer to the number of polymorphic sites
 	// function treats one contig
 	char nucvec[4] = {0};
 	int i,j,randbit,tempi;
 	int div,n11f,n12f,n22f,n11m,n12m,n22m,nA,nT,nG,nC,nN;
-	int **polysite=NULL;
 	char pos1,pos2,nuc1,nuc2;
 	int n,n2;
 	double a;
+	Contig contig;
+	
+	contig.name=name;
 	
 	*n3=0;
 	*n4=0;
@@ -203,52 +199,28 @@ int **polyfilter(int npos, int nind, char *genotypes, int *sex, int *npolysites,
 		}
 //		if (div == 1 || div == 2 ) {
 		if (div == 2 ) {
-			if (n==0) {
-				if((polysite=(int **)malloc(sizeof(int *)))==NULL){
-					fprintf(stderr,"error in memory allocation\n");
-					exit(2);
-				}
-				if((polysite[n]=(int *)malloc(sizeof(int)*9))==NULL){
-					fprintf(stderr,"error in memory allocation\n");
-					exit(3);
-				}
-			}
-			else {
-				if((polysite=(int **)realloc(polysite,sizeof(int *)*(n+1)))==NULL){
-					fprintf(stderr,"error in memory allocation\n");
-					exit(4);
-				}
-				if((polysite[n]=(int *)malloc(sizeof(int)*9))==NULL){
-					fprintf(stderr,"error in memory allocation\n");
-					exit(5);
-				}
-			}
-			polysite[n][0]=j+1; //position
-			polysite[n][N11F]=n11f; //female counts
-			polysite[n][N12F]=n12f; 
-			polysite[n][N22F]=n22f; 			
-			polysite[n][N11M]=n11m; //male counts
-			polysite[n][N12M]=n12m; 
-			polysite[n][N22M]=n22m; 	
-			polysite[n][N22M+1]=DNA2int(nucvec[0]);
+			SNP tempsnp;
+			tempsnp.position=sites[j]; //position
+			tempsnp.genotypes_by_sex[N11F]=n11f; //female counts
+			tempsnp.genotypes_by_sex[N12F]=n12f; 
+			tempsnp.genotypes_by_sex[N22F]=n22f; 			
+			tempsnp.genotypes_by_sex[N11M]=n11m; //male counts
+			tempsnp.genotypes_by_sex[N12M]=n12m; 
+			tempsnp.genotypes_by_sex[N22M]=n22m; 	
+			tempsnp.alleles[0]=DNA2int(nucvec[0]);
 			if (div == 2 ) {
-				polysite[n][N22M+2]=DNA2int(nucvec[1]);
+				tempsnp.alleles[1]=DNA2int(nucvec[1]);
 			}
 			else if (div == 1 ) {
-				polysite[n][N22M+2]=DNA2int(nucvec[0]);
+				tempsnp.alleles[1]=DNA2int(nucvec[0]);
 			}
+			contig.snps.push_back(tempsnp);
 			n++;
 		}
 	}
 
 	*theta/=(double)npos;
-	*npolysites=n;
-	if(n==0) {
-		return NULL;
-	}
-	else {
-		return polysite;
-	}
+	return contig;
 }
 
 int vcfsnp(char *line,char *nuc, int *nnuc)
@@ -305,31 +277,24 @@ int vcfsnp(char *line,char *nuc, int *nnuc)
 	return(0);
 }
 
-void write_contig(FILE *outfile,int datafmt, char *name, int npolysites, int n3, int n4, double theta, char **sitename, int **polysite) 
+void write_contig(FILE *outfile, Contig contig, int n3, int n4, double theta)
 {
 	int t,i;
-	fprintf(outfile,">%s\t%d\t%d\t%d\t%f\n",name,npolysites,n3,n4,theta);
+	int npolysites;
+	npolysites=contig.snps.size();
+	fprintf(outfile,">%s\t%d\t%d\t%d\t%f\n",contig.name.data(),npolysites,n3,n4,theta);
 	if(npolysites>0) {
 		for (t=0; t<npolysites; t++){
-			if (datafmt==GBS_FILTERED){
-				fprintf(outfile,"%s\t",sitename[polysite[t][0]-1]);
-				for (i=1; i<7; i++) {
-					fprintf(outfile,"%d\t",polysite[t][i]);
-				}
-			}
-			else if (datafmt==READS2SNP){
-				fprintf(outfile,"%d\t",polysite[t][0]);
-				fprintf(outfile,"%c%c\t",int2DNA(polysite[t][7]),int2DNA(polysite[t][8]));
-				for (i=1; i<7; i++) {
-					fprintf(outfile,"%d\t",polysite[t][i]);
-				}
-			}
-			else if (datafmt==VCF){
-				fprintf(outfile,"%s\t",sitename[polysite[t][0]-1]);
-				fprintf(outfile,"%c%c\t",int2DNA(polysite[t][7]),int2DNA(polysite[t][8]));
-				for (i=1; i<7; i++) {
-					fprintf(outfile,"%d\t",polysite[t][i]);
-				}
+			//			if (datafmt==GBS_FILTERED){
+			//				fprintf(outfile,"%s\t",sitename[polysite[t][0]-1]);
+			//				for (i=1; i<7; i++) {
+			//					fprintf(outfile,"%d\t",polysite[t][i]);
+			//				}
+			//			}
+			fprintf(outfile,"%d\t",contig.snps[t].position);
+			fprintf(outfile,"%c%c\t",int2DNA(contig.snps[t].alleles[0]),int2DNA(contig.snps[t].alleles[1]));
+			for (i=0; i<6; i++) {
+				fprintf(outfile,"%d\t",contig.snps[t].genotypes_by_sex[i]);
 			}
 			fprintf(outfile,"\n");
 		}
@@ -344,17 +309,18 @@ int main(int argc, char *argv[])
 	int ncontigs_allocated;
 	char *line = (char *)calloc((size_t)CUR_MAX,sizeof(char));
 	char *tmpline = (char *)calloc((size_t)CUR_MAX,sizeof(char));
-	char *contig;
-	int **polysite;
+	char *contname;
+	std::vector<int> sites;
 	int npolysites,n3,n4;
 	double theta;
 	int ncontigs,totsites=0;
 	int count = 0; 
 	int length = 0;
 	int i,ii,j,k,l,ni,fi,firstcontig,pos,t,itemp;
-	int nfem,nmal,ifem,imal,nplus=0;
+	int nfem,nmal,ifem,imal,nplus=0,chrpos;
 	int *sex,*foundsex;
-	char ch,c,oldc;
+	int ch;
+	char c,oldc;
 	char **name,**femname,**malname,**sitename;
 	int *ffound,*mfound;
 	int nI=0,nJ,nf,nm,nfound; //number of individuals
@@ -362,7 +328,7 @@ int main(int argc, char *argv[])
 	int randomise=0,ri,tempsex,datafmt;
 	int val,nnuc,maxnuc=5; //A, T, G, C, or N
 	char nuc[maxnuc];
-	char chrom[NAME_LEN],chrpos[NAME_LEN],vcfformatstring[NAME_LEN],genotypestring[NAME_LEN];
+	char chrom[NAME_LEN],vcfformatstring[NAME_LEN],genotypestring[NAME_LEN];
 
 	for(i=0;i<argc;i++) {
 		fprintf(stdout,"%s ",argv[i]);
@@ -435,229 +401,111 @@ int main(int argc, char *argv[])
 	
 	fprintf(stdout,"Reading data...\n");
 	
-	if(datafmt==READS2SNP || datafmt==GBS_FILTERED) {
-	
-	while (ch != EOF) { //loop through the genotype file
-		ch='a';
-		count = 0;
-		length = 0;
-		while ( (ch != '\n') && (ch != EOF) ) { //loop through the line
-			if(count == CUR_MAX) { // time to expand (for unexepectedly large line lengths) ?
-				CUR_MAX *= 2; 
-				count = 0;
-				line = (char *)realloc(line, sizeof(char) * CUR_MAX); 
-				tmpline = (char *)realloc(tmpline, sizeof(char) * CUR_MAX); 
-			}
-			ch = getc(fp); // read from stream.
-			line[length] = ch;
-			length++;
-			count++;
-		}
-		line[length] = '\0';
-		if (length <= 1) { //empty line : suppose it's the end of the file
-			break;
-		}
-		//We've read one line :
-		l++;
+	if(datafmt==READS2SNP) {
 		
-		if ( (datafmt==READS2SNP && line[0] == '>') || (datafmt==GBS_FILTERED && l==1)){
-			if (firstcontig==0) {	//Filtering polymorphisms for the last read contig
-				nJ=pos;
-				if(randomise){ //Fisher-Yates shuffling
-					for (i=0;i<nfound-1;i++) {
-						ri=i+rand()/(RAND_MAX/(nfound-i)+1);
-						tempsex=foundsex[i];
-						foundsex[i]=foundsex[ri];
-						foundsex[ri]=tempsex;
-					}
-//					for (i=0;i<nfound;i++) {
-//						fprintf(stdout,"%d\t",foundsex[i]);
-//					}
-//					fprintf(stdout,"\n");
+		while (ch != EOF) { //loop through the genotype file
+			ch='a';
+			count = 0;
+			length = 0;
+			while ( (ch != '\n') && (ch != EOF) ) { //loop through the line
+				if(count == CUR_MAX) { // time to expand (for unexepectedly large line lengths) ?
+					CUR_MAX *= 2; 
+					count = 0;
+					line = (char *)realloc(line, sizeof(char) * CUR_MAX); 
+					tmpline = (char *)realloc(tmpline, sizeof(char) * CUR_MAX); 
 				}
-				polysite=polyfilter(nJ,nfound,genotypes,foundsex,&npolysites,&n3,&n4,&theta);
-				free(genotypes);
-				if(datafmt==READS2SNP){
+				ch = getc(fp); // read from stream.
+				line[length] = (char)ch;
+				length++;
+				count++;
+			}
+			line[length] = '\0';
+			if (length <= 1) { //empty line : suppose it's the end of the file
+				break;
+			}
+			//We've read one line :
+			l++;
+			
+			if ( line[0] == '>'){
+				if (firstcontig==0) {	//Filtering polymorphisms for the last read contig
+					nJ=pos;
+					if(randomise){ //Fisher-Yates shuffling
+						for (i=0;i<nfound-1;i++) {
+							ri=i+rand()/(RAND_MAX/(nfound-i)+1);
+							tempsex=foundsex[i];
+							foundsex[i]=foundsex[ri];
+							foundsex[ri]=tempsex;
+						}
+					}
+					Contig contig=polyfilter(contname,sites,nJ,nfound,genotypes,foundsex,&n3,&n4,&theta);
+					//				polysite=polyfilter(nJ,nfound,genotypes,foundsex,&npolysites,&n3,&n4,&theta);
+					sites.clear(); 
+					free(genotypes);
 					free(sex);
 					free(foundsex);
 					for (i=0; i < ni; i++){
 						free(name[i]);
 					}
 					free(name);
-				}
-				write_contig(outfile,datafmt,contig,npolysites,n3,n4,theta,sitename,polysite);
-				for(t=0;t<npolysites;t++) {
-					if(datafmt==GBS_FILTERED){
-						free(sitename[t]);
+					write_contig(outfile,contig,n3,n4,theta);
+					free(contname);
+					totsites+=contig.snps.size();
+					k++;
+					if(k % 5000 == 0){
+						fprintf(stdout,"%d contigs, %d polymorphic sites, and still reading...\n",k,totsites);
 					}
 				}
-				if(datafmt==GBS_FILTERED){
-					free(sitename);
-				}
-				if(npolysites>0) {
-					free(polysite);
-				}
-				free(contig);
-				totsites+=npolysites;
-				k++;
-				if(k % 5000 == 0){
-					fprintf(stdout,"%d contigs, %d polymorphic sites, and still reading...\n",k,totsites);
-				}
-			}
-			firstcontig=0;
-			
-			//Start preparing to read a new contig
-				if((contig=(char *)malloc(sizeof(char)*NAME_LEN))==NULL) { 
+				firstcontig=0;
+				
+				//Start preparing to read a new contig
+				if((contname=(char *)malloc(sizeof(char)*NAME_LEN))==NULL) { 
 					fprintf(stderr,"error in memory allocation\n");
 					exit(15);
 				}	
-//				if((polysite=(int ***)realloc(polysite,sizeof(int **)*ncontigs_allocated))==NULL) {
-//					fprintf(stderr,"error in memory allocation\n");
-//					exit(17);
-//				}		
-
-			if ( strlen(line) >= NAME_LEN ) {
-				fprintf(stderr,"Error: a contig name is too long (more than %d characters) on line %d.\n",NAME_LEN-1,l);
-				exit(22);
+				
+				if ( strlen(line) >= NAME_LEN ) {
+					fprintf(stderr,"Error: a contig name is too long (more than %d characters) on line %d.\n",NAME_LEN-1,l);
+					exit(22);
+				}
+				sscanf(line,">%s",contname);
 			}
-			if ( datafmt==READS2SNP ) {
-				sscanf(line,">%s",contig);
-				//			printf("%s\n",&contig[k*NAME_LEN]);
-			}
-			else if ( datafmt==GBS_FILTERED ) { //only one "contig", and names are in the first line
-				sprintf(contig,"GBS_data");				
-				//we'll have to count the number of individuals first : 11 fields separated by tabs, then the names of individuals
-				ni=0; //The number of tabs-10 is the number of individuals.
-				i=0;
-				while ((c=line[i]) != '\0'){
-					if (c == '\t') 
-						ni++;
-					i++;
+			else if ( line[0] == 'p' ){
+				name=getgennames(line, &ni); //returns all names present in line, and the number of names ni
+				if(ni<=0){
+					fprintf(stdout, "No individual names found in line %d; format error ?\nexiting\n",l);
+					exit(1);
 				}
-				ni-=10;
-				if((name=(char **)calloc((size_t)(ni),sizeof(char *)))==NULL) { 
-					fprintf(stderr,"error in memory allocation\n");
-					exit(23);
-				}
-				//find names iteratively ; shorten the line for each name found :
-				for (i=0;i<11;i++) { //first remove the non-names
-					sscanf(line,"%*s\t%[^\n]",tmpline);
-					strcpy(line,tmpline);
-				}
-				for (i=0; i<ni; i++){
-					if((name[i]= (char *)malloc(sizeof(char) * NAME_LEN))==NULL) { 
-						fprintf(stderr,"error in memory allocation\n");
-						exit(24);
-					}
-					sscanf(line,"%s%[^\n]",name[i],tmpline);
-					strcpy(line,tmpline);
-					fprintf(stdout,"%s\t",name[i]);
-				}
+				
 				//Find out the sex of the individuals.
 				if((sex=(int *)calloc((size_t)(ni),sizeof(int)))==NULL) { 
 					fprintf(stderr,"error in memory allocation\n");
-					exit(25);
+					exit(29);
 				}
 				if((foundsex=(int *)calloc((size_t)(ni),sizeof(int)))==NULL) { 
 					fprintf(stderr,"error in memory allocation\n");
-					exit(26);
+					exit(30);
 				}
-				nf=0;
-				nm=0;
-				for (i=0; i<ni; i++){			
-					sex[i]=-1;
-					for (ifem=0;ifem<nfem;ifem++) {
-						if (strcmp(name[i],femname[ifem])==0) {
-							sex[i]=FEMALE;
-							foundsex[nm+nf]=FEMALE;
-							ffound[ifem]=1;
-							nf++;
-						}
-					}
-					for (imal=0;imal<nmal;imal++) {
-						if (strcmp(name[i],malname[imal])==0) {
-							sex[i]=MALE;
-							foundsex[nm+nf]=MALE;
-							mfound[imal]=1;
-							nm++;
-						}
-					}
-				}
-				nfound=nf+nm;
+				
+				nfound=findsex(name, ni, femname, nfem, malname, nmal, sex, foundsex, ffound, &nf, mfound, &nm);
+				
 				if(ni>nfem+nmal){
 					if(nplus==0) {
-					fprintf(stdout,"Contig %s seems to have more observations than names given:\n",&contig[k*NAME_LEN]);
-					fprintf(stdout,"found %d individuals in contig, and %d names in command line\n",ni,nfem+nmal);
-					fprintf(stdout,"No sex found for individual(s): ");
-					for (i=0; i<ni; i++){
-						if ( sex[i]==-1 ) {
-							fprintf(stdout,"%s ",name[i]);
-						}		
-					}
-					fprintf(stdout,"\n");
-					fprintf(stdout,"Suppressing warnings about following contigs\n");
-					nplus=1;
+						fprintf(stdout,"Contig %s seems to have more observations than names given:\n",contname);
+						fprintf(stdout,"found %d individuals in contig, and %d names in command line\n",ni,nfem+nmal);
+						fprintf(stdout,"No sex found for individual(s): ");
+						for (i=0; i<ni; i++){
+							if ( sex[i]==-1 ) {
+								fprintf(stdout,"%s ",name[i]);
+							}		
+						}
+						fprintf(stdout,"\n");
+						fprintf(stdout,"Suppressing warnings about following contigs\n");
+						nplus=1;
 					}
 				}
-//				if(nm+nf<ni){
-//					fprintf(stdout,"No sex found for individual(s): ");
-//					for (i=0; i<ni; i++){
-//						if ( sex[i]==-1 ) {
-//							fprintf(stdout,"%s ",name[i]);
-//						}		
-//					}
-//					fprintf(stdout,"\n");
-//				}
-				firstcontig=0;
+				j=0;
 			}
-		}
-		else if ( datafmt==READS2SNP && line[0] == 'p' ){
-			name=getgennames(line, &ni); //returns all names present in line, and the number of names ni
-			if(ni<=0){
-				fprintf(stdout, "No individual names found in line %d; format error ?\nexiting\n",l);
-				exit(1);
-			}
-			
-			//Find out the sex of the individuals.
-			if((sex=(int *)calloc((size_t)(ni),sizeof(int)))==NULL) { 
-				fprintf(stderr,"error in memory allocation\n");
-				exit(29);
-			}
-			if((foundsex=(int *)calloc((size_t)(ni),sizeof(int)))==NULL) { 
-				fprintf(stderr,"error in memory allocation\n");
-				exit(30);
-			}
-			
-			nfound=findsex(name, ni, femname, nfem, malname, nmal, sex, foundsex, ffound, &nf, mfound, &nm);
-			
-			if(ni>nfem+nmal){
-				if(nplus==0) {
-					fprintf(stdout,"Contig %s seems to have more observations than names given:\n",&contig[k*NAME_LEN]);
-					fprintf(stdout,"found %d individuals in contig, and %d names in command line\n",ni,nfem+nmal);
-					fprintf(stdout,"No sex found for individual(s): ");
-					for (i=0; i<ni; i++){
-						if ( sex[i]==-1 ) {
-							fprintf(stdout,"%s ",name[i]);
-						}		
-					}
-					fprintf(stdout,"\n");
-					fprintf(stdout,"Suppressing warnings about following contigs\n");
-					nplus=1;
-				}
-			}
-			//				if(nm+nf<ni){
-			//					fprintf(stdout,"No sex found for individual(s): ");
-			//					for (i=0; i<ni; i++){
-			//						if ( sex[i]==-1 ) {
-			//							fprintf(stdout,"%s ",name[i]);
-			//						}		
-			//					}
-			//					fprintf(stdout,"\n");
-			//				}
-			j=0;
-		}
-		else { //line contains genotype data
-			if(datafmt==READS2SNP){
+			else { //line contains genotype data
 				sscanf(line,"%d%[^\n]",&pos,tmpline);
 				strcpy(line,tmpline);
 				if(pos != j+1){
@@ -665,124 +513,72 @@ int main(int argc, char *argv[])
 					fprintf(stderr,"read \"%s\" instead\n",line);
 					exit(1);
 				}
-			}
-			else if (datafmt==GBS_FILTERED){
-				if(j==0){
-					if((sitename=(char **)malloc(sizeof(char *)))==NULL){
+				sites.push_back(pos);
+				if (j==0) {
+					if((genotypes=(char *)malloc(sizeof(char)*(nfound)*2))==NULL){
 						fprintf(stderr,"error in memory allocation\n");
-						exit(31);
+						exit(34);
 					}
-				} 
+				}
 				else {
-					if((sitename=(char **)realloc(sitename,sizeof(char *)*(j+1)))==NULL){
+					if((genotypes=(char *)realloc(genotypes,sizeof(char)*(nfound)*2*(j+1)))==NULL){
 						fprintf(stderr,"error in memory allocation\n");
-						exit(32);
+						exit(35);
 					}
 				}
-				if((sitename[j]=(char *)malloc(sizeof(char)*NAME_LEN))==NULL){
-					fprintf(stderr,"error in memory allocation\n");
-					exit(33);
-				}
-				sscanf(line,"%s%[^\n]",sitename[j],tmpline);
-				strcpy(line,tmpline);
-				for (i=0;i<10;i++) { //remove the non-used fields
-					sscanf(line,"\t%*s%[^\n]",tmpline);
-					strcpy(line,tmpline);
-				}
-			}
-			if (j==0) {
-				//					if((genotypes=(char *)malloc(sizeof(char)*ni*2))==NULL){
-				if((genotypes=(char *)malloc(sizeof(char)*(nfound)*2))==NULL){
-					fprintf(stderr,"error in memory allocation\n");
-					exit(34);
-				}
-			}
-			else {
-				//					if((genotypes=realloc(genotypes,sizeof(char)*ni*2*pos))==NULL){
-				//					if((genotypes=realloc(genotypes,sizeof(char)*(nfound)*2*pos))==NULL){
-				if((genotypes=(char *)realloc(genotypes,sizeof(char)*(nfound)*2*(j+1)))==NULL){
-					fprintf(stderr,"error in memory allocation\n");
-					exit(35);
-				}
-			}
 				fi=0;
 				for (i=0; i<ni; i++){
-//					sscanf(line,"\t%c%c|%lf%[^\n]",&genotypes[j*ni*2+2*i],&genotypes[j*ni*2+2*i+1],&true_prob,tmpline);
-//					sscanf(line,"\t%c%c|%*f%[^\n]",&genotypes[j*ni*2+2*i],&genotypes[j*ni*2+2*i+1],tmpline);
 					if (sex[i]>=0) {
-						if (datafmt==READS2SNP){
-							sscanf(line,"\t%c%c|%*f%[^\n]",&genotypes[j*nfound*2+2*fi],&genotypes[j*nfound*2+2*fi+1],tmpline);
-						} 
-						else {
-							sscanf(line,"\t%c|%c%[^\n]",&genotypes[j*nfound*2+2*fi],&genotypes[j*nfound*2+2*fi+1],tmpline);
-						}
-//						fprintf(stdout,"%c%c\t",genotypes[j*nfound*2+2*fi],genotypes[j*nfound*2+2*fi+1]);
+						sscanf(line,"\t%c%c|%*f%[^\n]",&genotypes[j*nfound*2+2*fi],&genotypes[j*nfound*2+2*fi+1],tmpline);
 						fi++;
 					}
 					else {
-						if (datafmt==READS2SNP){
-							sscanf(line,"\t%*c%*c|%*f%[^\n]",tmpline);
-						} 
-						else {
-							sscanf(line,"\t%*c|%*c%[^\n]",tmpline);
-						}
+						sscanf(line,"\t%*c%*c|%*f%[^\n]",tmpline);
 					}
-//					if(true_prob>2*GSL_DBL_MIN) {
-//						totgenprob+=true_prob;
-//						gensite++;
-//					}
 					strcpy(line,tmpline);
 				}
-//					fprintf(stdout,"\n");
 				j++;
-			
+				
+			}
 		}
-//		memset(line, '\0', strlen(line)*(sizeof line));
-	}
-	//	fprintf(stdout,"%d sites (individuals * positions), error rate (reads2snp) = %f\n",gensite,1.-totgenprob/gensite);
-	nJ=j;
-	
-	//Filtering polymorphisms for the last contig	
-	polysite=polyfilter(nJ,nfound,genotypes,foundsex,&npolysites,&n3,&n4,&theta);
-	free(genotypes);
-	write_contig(outfile,datafmt,contig,npolysites,n3,n4,theta,sitename,polysite);
-	if(datafmt==READS2SNP){
+		nJ=j;
+		if(randomise){ //Fisher-Yates shuffling
+			for (i=0;i<nfound-1;i++) {
+				ri=i+rand()/(RAND_MAX/(nfound-i)+1);
+				tempsex=foundsex[i];
+				foundsex[i]=foundsex[ri];
+				foundsex[ri]=tempsex;
+			}
+		}
+		Contig contig=polyfilter(contname,sites,nJ,nfound,genotypes,foundsex,&n3,&n4,&theta);
+		//				polysite=polyfilter(nJ,nfound,genotypes,foundsex,&npolysites,&n3,&n4,&theta);
+		free(genotypes);
 		free(sex);
 		free(foundsex);
 		for (i=0; i < ni; i++){
 			free(name[i]);
 		}
 		free(name);
-	}
-	for(t=0;t<npolysites;t++) {
-		if(datafmt==GBS_FILTERED){
-			free(sitename[t]);
+		write_contig(outfile,contig,n3,n4,theta);
+		free(contname);
+		totsites+=contig.snps.size();
+		k++;
+		fprintf(stdout,"%d contigs, %d polymorphic sites, and still reading...\n",k,totsites);
+		
+		
+		for (ifem=0;ifem<nfem;ifem++) {
+			if(ffound[ifem]==0){
+				fprintf(stdout,"Individual %s was not found in any of the contigs\n",femname[ifem]);
+			}
 		}
-	}
-	if(datafmt==GBS_FILTERED){
-		free(sitename);
-	}
-	if(npolysites>0) {
-		free(polysite);
-	}
-	free(contig);
-	totsites+=npolysites;
-	ncontigs=k+1;
-	fprintf(stdout,"Read %d contigs and %d polymorphic sites\n",ncontigs,totsites);
-
-	for (ifem=0;ifem<nfem;ifem++) {
-		if(ffound[ifem]==0){
-			fprintf(stdout,"Individual %s was not found in any of the contigs\n",femname[ifem]);
+		for (imal=0;imal<nmal;imal++) {
+			if (mfound[imal]==0) {
+				fprintf(stdout,"Individual %s was not found in any of the contigs\n",malname[imal]);
+			}
 		}
-	}
-	for (imal=0;imal<nmal;imal++) {
-		if (mfound[imal]==0) {
-			fprintf(stdout,"Individual %s was not found in any of the contigs\n",malname[imal]);
-		}
-	}
 	}
 	else if (datafmt==VCF){
-		if((contig=(char *)malloc(sizeof(char)*NAME_LEN))==NULL) { 
+		if((contname=(char *)malloc(sizeof(char)*NAME_LEN))==NULL) { 
 			fprintf(stderr,"error in memory allocation\n");
 			exit(1);
 		}	
@@ -800,7 +596,7 @@ int main(int argc, char *argv[])
 					tmpline = (char *)realloc(tmpline, sizeof(char) * CUR_MAX); 
 				}
 				ch = getc(fp); // read from stream.
-				line[length] = ch;
+				line[length] = char(ch);
 				length++;
 				count++;
 			}
@@ -811,20 +607,18 @@ int main(int argc, char *argv[])
 			//We've read one line :
 			l++;
 			
-//			fprintf(stdout,"%d %s",l,line);
-						
+			
 			if( strncmp(line,"#CHROM",6)==0 ) { //only one line with individual names in vcf file				
 				ni=0;
 				i=0;
 				while ((c=line[i]) != '\0'){
-//					fprintf(stdout,"%c,",c);
+					//					fprintf(stdout,"%c,",c);
 					if ( c == '\t' || c == ' ' ){
 						if ( oldc == '\t' || oldc == ' '){
 							i++;							
 							continue;
 						}						
 						ni++;
-//						fprintf(stdout,"ni=%d\n",ni);
 					}
 					if(ni<=8){
 						strcpy(tmpline,&line[1]);
@@ -842,8 +636,6 @@ int main(int argc, char *argv[])
 					exit(36);
 				}
 				//find names iteratively ; shorten the line for each name found :
-				//				sscanf(line,"position%[^\n]",tmpline);
-				//				strcpy(line,tmpline);
 				for (i=0; i<ni; i++){
 					if((name[i]= (char *)malloc(sizeof(char) * NAME_LEN))==NULL) { 
 						fprintf(stderr,"error in memory allocation\n");
@@ -851,7 +643,6 @@ int main(int argc, char *argv[])
 					}
 					sscanf(line,"\t%s%[^\n]",name[i],tmpline);
 					strcpy(line,tmpline);
-//					fprintf(stdout,"%s\t",name[i]);
 				}
 				//Find out the sex of the individuals.
 				if((sex=(int *)calloc((size_t)(ni),sizeof(int)))==NULL) { 
@@ -869,7 +660,6 @@ int main(int argc, char *argv[])
 					//fprintf(stdout,"%s",name[i]);
 					for (ifem=0;ifem<nfem;ifem++) {
 						if (strcmp(name[i],femname[ifem])==0) {
-							//fprintf(stdout,": female\t");
 							sex[i]=FEMALE;
 							foundsex[nm+nf]=FEMALE;
 							ffound[ifem]=1;
@@ -878,7 +668,6 @@ int main(int argc, char *argv[])
 					}
 					for (imal=0;imal<nmal;imal++) {
 						if (strcmp(name[i],malname[imal])==0) {
-							//fprintf(stdout,": male\t");
 							sex[i]=MALE;
 							foundsex[nm+nf]=MALE;
 							mfound[imal]=1;
@@ -910,12 +699,12 @@ int main(int argc, char *argv[])
 					exit(0);
 				}
 				
-				strcpy(contig,"\0");
+				strcpy(contname,"\0");
 			}
 			else if (strncmp(line,"##",2)!=0) { //line contains genotype data
-				sscanf(line,"%s\t%s%[^\n]",chrom,chrpos,tmpline);
+				sscanf(line,"%s\t%d%[^\n]",chrom,&chrpos,tmpline);
 				strcpy(line,tmpline);
-				if(strcmp(chrom,contig)==0){ //still the same contig as before
+				if(strcmp(chrom,contname)==0){ //still the same contig as before
 					
 					val=vcfsnp(line,nuc,&nnuc);
 					if(val==-1){
@@ -940,29 +729,8 @@ int main(int argc, char *argv[])
 							exit(41);
 						}
 					}
-					if(j==0){
-						if((sitename=(char **)malloc(sizeof(char *)))==NULL){
-							fprintf(stderr,"error in memory allocation\n");
-							exit(42);
-						}
-					} 
-					else {
-						if((sitename=(char **)realloc(sitename,sizeof(char *)*(j+1)))==NULL){
-							fprintf(stderr,"error in memory allocation; k=%d\n",k);
-							exit(43);
-						}
-					}
-					if((sitename[j]=(char *)malloc(sizeof(char)*NAME_LEN))==NULL){
-						fprintf(stderr,"error in memory allocation; k=%d, j=%d\n",k,j);
-						exit(44);
-					}
-					strcpy(sitename[j],chrpos);
-
-//					fprintf(stdout,"%s\t%s\t%d\t",contig,sitename[j],nnuc);
 					
-//					for (i=0;i<nnuc;i++){
-//					fprintf(stdout,"%c\t",nuc[i]);
-//					}
+					sites.push_back(chrpos);
 					
 					//strip fields we don't use 
 					sscanf(line,"\t%*s\t%*s\t%*s\t%s%[^\n]",vcfformatstring,tmpline);
@@ -974,7 +742,6 @@ int main(int argc, char *argv[])
 					
 					fi=0;
 					for (i=0; i<ni; i++){
-//						fprintf(stdout,"%d %d\t",i,sex[i]);
 						if (sex[i]>=0) {
 							sscanf(line,"\t%s%[^\n]",genotypestring,tmpline);
 							for(ii=0;ii<2;ii++){
@@ -993,7 +760,6 @@ int main(int argc, char *argv[])
 									exit(1);
 								}
 							}
-//							fprintf(stdout,"\"%c%c\"\t",genotypes[j*nfound*2+2*fi],genotypes[j*nfound*2+2*fi+1]);
 							fi++;
 						}
 						else {
@@ -1001,36 +767,24 @@ int main(int argc, char *argv[])
 						}
 						strcpy(line,tmpline);
 					}
-//					fprintf(stdout,"\n");
 					j++;
 				}
 				else { //new contig
 					//treat last read contig
 					if (firstcontig!=1){
-						fprintf(stdout,"Treating contig %s...\n",contig);
+						fprintf(stdout,"Treating contig %s...\n",contname);
 						nJ=j;
 						if(nJ>0){
-							polysite=polyfilter(nJ,nfound,genotypes,foundsex,&npolysites,&n3,&n4,&theta);
+							Contig contig=polyfilter(contname,sites,nJ,nfound,genotypes,foundsex,&n3,&n4,&theta);
+							sites.clear(); 
 							free(genotypes);
-							write_contig(outfile,datafmt,contig,npolysites,n3,n4,theta,sitename,polysite);
-							for(j=0;j<nJ;j++){
-								free(sitename[j]);
-							}
-							free(sitename);
-							if(npolysites>0) {
-								for(t=0;t<npolysites;t++) {
-									free(polysite[t]);
-								}
-								free(polysite);
-							}
+							write_contig(outfile,contig,n3,n4,theta);
+							totsites+=contig.snps.size();
 						}
-//						free(contig);
-						totsites+=npolysites;
 						k++;
 					}
 					
-					strcpy(contig,chrom);
-//					fprintf(stdout,"contig=%s\n",contig);
+					strcpy(contname,chrom);
 					firstcontig=0;
 					j=0;				
 					
@@ -1049,15 +803,7 @@ int main(int argc, char *argv[])
 						fprintf(stderr,"error in memory allocation\n");
 						exit(53);
 					}
-					if((sitename=(char **)malloc(sizeof(char *)))==NULL){
-						fprintf(stderr,"error in memory allocation\n");
-						exit(54);
-					}
-					if((sitename[j]=(char *)malloc(sizeof(char)*NAME_LEN))==NULL){
-						fprintf(stderr,"error in memory allocation\n");
-						exit(55);
-					}
-					strcpy(sitename[j],chrpos);
+					sites.push_back(chrpos);
 					//strip fields we don't use 
 					sscanf(line,"\t%*s\t%*s\t%*s\t%s%[^\n]",vcfformatstring,tmpline);
 					strcpy(line,tmpline);
@@ -1102,22 +848,13 @@ int main(int argc, char *argv[])
 		
 		//Filtering polymorphisms for the last contig	
 		if(nJ>0){
-			polysite=polyfilter(nJ,nfound,genotypes,foundsex,&npolysites,&n3,&n4,&theta);
+			Contig contig=polyfilter(contname,sites,nJ,nfound,genotypes,foundsex,&n3,&n4,&theta);
+			sites.clear(); 
 			free(genotypes);
-			write_contig(outfile,datafmt,contig,npolysites,n3,n4,theta,sitename,polysite);
-			for(j=0;j<nJ;j++){
-				free(sitename[j]);
-			}
-			free(sitename);
-			if(npolysites>0) {
-				for(t=0;t<npolysites;t++) {
-					free(polysite[t]);
-				}
-				free(polysite);
-			}
+			write_contig(outfile,contig,n3,n4,theta);
+		totsites+=contig.snps.size();
 		}
-		free(contig);
-		totsites+=npolysites;
+		free(contname);
 		ncontigs=k+1;
 		fprintf(stdout,"Read %d contigs and %d polymorphic sites\n",ncontigs,totsites);	
 		for(i=0; i<ni; i++){
