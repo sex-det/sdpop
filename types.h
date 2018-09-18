@@ -18,3 +18,23 @@ struct Contig {
 	std::string name;
 	std::vector<SNP> snps; //number of snps
 };
+
+struct Individual {
+	std::string name;
+	int sex;
+};
+
+struct Genotype {
+	char nucleotides[2];
+};
+
+struct Genotypes {
+	int position;
+	std::vector<Genotype> individualgenotypes;
+};
+
+struct ContigGenotypes {
+	std::string name;
+	std::vector<Individual> individuals;
+	std::vector<Genotypes> genotypes;
+};

@@ -282,13 +282,15 @@ int read_cnt(FILE *fp, 	int namelen, int chromosomes, char **contig_p, int **npo
 	return ncontigs;
 }
 
-char **getgennames(char *line, int *nind)
+char **getgennames(const char *linein, int *nind)
 {
-	
 	int ni=0,i=0,ichar,pipepos;
 	char c;
-	char *tmpline = (char*)calloc(strlen(line),sizeof(char));
+	char *line = (char*)calloc(strlen(linein)+1,sizeof(char));
+	char *tmpline = (char*)calloc(strlen(linein)+1,sizeof(char));
 	char **name;
+
+	strcpy(line,linein);
 	
 	//we'll have "position\tname1\tname2\t...\tnameN\0 : the number of tabs is the number of individuals.
 	
@@ -331,16 +333,66 @@ char **getgennames(char *line, int *nind)
 		}
 		
 	}
+	free(line);
 	free(tmpline);
 	*nind=ni;
 	return name;
 }
 
+char **getvcfnames(const char *linein, int *nind)
+{
+	int ni=0,i=0,c,oldc;
+	char *line = (char*)calloc(strlen(linein)+1,sizeof(char));
+	char *tmpline = (char*)calloc(strlen(linein)+1,sizeof(char));
+	char **name;
+	
+	strcpy(line,linein);
+	
+	oldc='a';
+	while ((c=line[i]) != '\0'){
+		if ( c == '\t' || c == ' ' ){
+			if ( oldc == '\t' || oldc == ' '){
+				i++;							
+				continue;
+			}						
+			ni++;
+		}
+		if(ni<=8){
+			strcpy(tmpline,&line[1]);
+			strcpy(line,tmpline);
+		}
+		else {
+			i++;
+		}
+		oldc=c;
+	}
+	ni=ni-8; //first 8 tabs separate information fields
+	fprintf(stdout,"Treating header; %d names found...\n",ni);
+	if((name=(char **)calloc((size_t)(ni),sizeof(char *)))==NULL) { 
+		fprintf(stderr,"error in memory allocation\n");
+		exit(36);
+	}
+	//find names iteratively ; shorten the line for each name found :
+	for (i=0; i<ni; i++){
+		if((name[i]= (char *)malloc(sizeof(char) * NAME_LEN))==NULL) { 
+			fprintf(stderr,"error in memory allocation\n");
+			exit(37);
+		}
+		sscanf(line,"\t%s%[^\n]",name[i],tmpline);
+		strcpy(line,tmpline);
+	}
+	free(line);
+	free(tmpline);
+	*nind=ni;
+	return name;
+}
+
+
 int findsex(char **name, int ni, char **femname, int nfem, char **malname, int nmal, int *sex, int *foundsex, int *ffound, int *nfgen, int *mfound, int *nmgen)
 {
 	//Find out the sex of the individuals.
-	//sex has the sex of all individuals in the *gen file (sex can be male, female, or absent)
-	//foundsex has the sex of the individuals we want to study, in the order of the *gen file
+	//sex has the sex of all individuals in the *gen or *vcf file (sex can be male, female, or absent)
+	//foundsex has the sex of the individuals we want to study, in the order of the *gen or *vcf file
 	
 	int i,ifem,imal,nf,nm,nfound;
 	nf=0;
@@ -368,4 +420,86 @@ int findsex(char **name, int ni, char **femname, int nfem, char **malname, int n
 	*nfgen=nf;
 	*nmgen=nm;
 	return nfound;
+}
+
+std::vector<Genotype> vcfgenotypes(int ni, int *sex, const char *linein, char *nuc, int maxnuc)
+{
+	int fi,i,c,ii;
+	char vcfformatstring[NAME_LEN],genotypestring[NAME_LEN];
+	char *line = (char*)calloc(strlen(linein)+1,sizeof(char));
+	char *tmpline = (char*)calloc(strlen(linein)+1,sizeof(char));
+	
+	std::vector<Genotype> genotypes;
+	strcpy(line,linein);
+	
+	//strip fields we don't use 
+	sscanf(line,"%*s\t%*s\t%*s\t%*s\t%*s\t%*s\t%*s\t%*s\t%s%[^\n]",vcfformatstring,tmpline);
+	strcpy(line,tmpline);
+	if(strncmp(vcfformatstring,"GT",2)!=0){
+		fprintf(stderr,"Error: this doesn't seem to be a supported format (\"GT\" tag not found where expected)\n");
+		exit(1);					
+	}
+	
+	for (i=0; i<ni; i++){
+		if (sex[i]>=0) {
+			Genotype genotype;
+			sscanf(line,"\t%s%[^\n]",genotypestring,tmpline);
+			for(ii=0;ii<2;ii++){
+				c=genotypestring[2*ii];
+				if(c=='.'){
+					genotype.nucleotides[ii]='N';
+					//									genotypes[j*nfound*2+2*fi+ii]='N';
+					if(ii==0){
+						genotypestring[2]='.';
+					}
+				}
+				else if ( isdigit(c) && (c - '0') <= maxnuc ) {
+					genotype.nucleotides[ii]=nuc[c - '0'];
+					//									genotypes[j*nfound*2+2*fi+ii]=nuc[c - '0'];
+				}
+				else {
+					fprintf(stderr,"Error in reading genotype\n");
+					exit(1);
+				}
+			}
+			genotypes.push_back(genotype);
+		}
+		else {
+			sscanf(line,"\t%*s%[^\n]",tmpline);
+		}
+		strcpy(line,tmpline);
+	}
+	free(line);
+	free(tmpline);
+	return genotypes;
+}
+
+std::vector<Genotype> gengenotypes(int ni,int *sex,const char *linein)
+{
+	int i;
+	char *line = (char*)calloc(strlen(linein)+1,sizeof(char));
+	char *tmpline = (char*)calloc(strlen(linein)+1,sizeof(char));
+	char nuc1,nuc2;
+	
+	std::vector<Genotype> genotypes;
+	strcpy(line,linein);
+
+	sscanf(line,"%*d%[^\n]",tmpline);
+	strcpy(line,tmpline);
+	for (i=0; i<ni; i++){
+		if (sex[i]>=0) {
+			Genotype genotype;
+			sscanf(line,"\t%c%c|%*f%[^\n]",&nuc1,&nuc2,tmpline);
+			genotype.nucleotides[0]=nuc1;
+			genotype.nucleotides[1]=nuc2;
+			genotypes.push_back(genotype);
+		}
+		else {
+			sscanf(line,"\t%*c%*c|%*f%[^\n]",tmpline);
+		}
+		strcpy(line,tmpline);
+	}
+	free(line);
+	free(tmpline);
+	return genotypes;
 }
