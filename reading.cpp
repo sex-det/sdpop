@@ -387,6 +387,54 @@ char **getvcfnames(const char *linein, int *nind)
 	return name;
 }
 
+int vcfsnp(const char *line,char *nuc, int *nnuc) //test if position is a snp or monomorphic; skip indels
+{
+	char allele1[NAME_LEN],allele2[NAME_LEN];
+	int maxnuc=5; //A, T, G, C, or N
+	int i,len;
+	char c;
+	int mnuc;
+	
+	//find out if this is a SNP, and what the observed alleles are
+	sscanf(line,"%*s\t%*s\t%*s\t%s\t%s",allele1,allele2);
+	if(strlen(allele1)>1){
+		return(1); //not a SNP
+	}
+//	fprintf(stdout,"%s\t%s\t%d\t%d\t",allele1,allele2,(int)strlen(allele1),(int)strlen(allele2));
+	nuc[0]=allele1[0];
+	//allele2 might be a comma-separated list
+	if((len=(int)strlen(allele2))>1){
+		i=0;
+		mnuc=1;
+		while(i<=len-1){
+			c=allele2[i];
+			if(i==len-1 || allele2[i+1]==','){
+				if(mnuc>maxnuc){
+					fprintf(stderr,"Error: too many different nucleotides given\n");
+					return -1;
+				}
+				nuc[mnuc]=c;
+				mnuc++;
+			}
+			else {
+				return 1; //not a SNP
+			}
+			i=i+2;
+		}
+	}
+	else { //strlen(allele2)==1
+		if(strncmp(allele2,".",1)==0){
+			mnuc=1;
+		}
+		else {
+			nuc[1]=allele2[0];
+			mnuc=2;
+		}
+	}
+//	fprintf(stdout,"--%d--",mnuc);
+	*nnuc=mnuc;
+	return 0;
+}
 
 int findsex(char **name, int ni, char **femname, int nfem, char **malname, int nmal, int *sex, int *foundsex, int *ffound, int *nfgen, int *mfound, int *nmgen)
 {
@@ -424,7 +472,7 @@ int findsex(char **name, int ni, char **femname, int nfem, char **malname, int n
 
 std::vector<Genotype> vcfgenotypes(int ni, int *sex, const char *linein, char *nuc, int maxnuc)
 {
-	int fi,i,c,ii;
+	int i,c,ii;
 	char vcfformatstring[NAME_LEN],genotypestring[NAME_LEN];
 	char *line = (char*)calloc(strlen(linein)+1,sizeof(char));
 	char *tmpline = (char*)calloc(strlen(linein)+1,sizeof(char));

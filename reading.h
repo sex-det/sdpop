@@ -22,6 +22,7 @@ int read_cnt(FILE *fp, int namelen, int chromosomes, char **contig_p, int **npol
 int read_cnt2(FILE *fp, int namelen, int chromosomes, std::vector<Contig>& contigs);
 char **getgennames(const char *linein, int *ni);
 char **getvcfnames(const char *linein, int *nind);
+int vcfsnp(const char *line,char *nuc, int *nnuc);
 int findsex(char **name, int ni, char **femname, int nfem, char **malname, int nmal, int *sex, int *foundsex, int *ffound, int *nfgen, int *mfound, int *nmgen);
 std::vector<Genotype> vcfgenotypes(int ni, int *sex, const char *linein, char *nuc, int maxnuc);
 std::vector<Genotype> gengenotypes(int ni,int *sex, const char *linein);

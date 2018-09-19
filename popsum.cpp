@@ -62,14 +62,14 @@ Contig polyfilter(ContigGenotypes contiggenotypes, int *n3, int *n4, double *the
 	int i,j,ii,randbit;
 	int div,n11f,n12f,n22f,n11m,n12m,n22m,nA,nT,nG,nC,nN;
 	char pos1,pos2,nuc1,nuc2;
-	int n,n2,npos,nind;
+	int n,n2,nt,nf,npos,nind;
 	double a;
 	Contig contig;
 	
 	contig.name=contiggenotypes.name;
 	
-	*n3=0;
-	*n4=0;
+	nt=0;
+	nf=0;
 	*theta=0.;
 	
 	npos=contiggenotypes.genotypes.size();
@@ -198,10 +198,10 @@ Contig polyfilter(ContigGenotypes contiggenotypes, int *n3, int *n4, double *the
 				div=-1;
 			}				
 		else if (div ==3) {
-			*n3++;
+			nt++;
 		}
 		else if (div ==4) {
-			*n4++;
+			nf++;
 		}
 //		if (div == 1 || div == 2 ) {
 		if (div == 2 ) {
@@ -224,56 +224,10 @@ Contig polyfilter(ContigGenotypes contiggenotypes, int *n3, int *n4, double *the
 			n++;
 		}
 	}
-
+	*n3=nt;
+	*n4=nf;
 	*theta/=(double)npos;
 	return contig;
-}
-
-int vcfsnp(const char *line,char *nuc, int *nnuc)
-{
-	char allele1[NAME_LEN],allele2[NAME_LEN];
-	int maxnuc=5; //A, T, G, C, or N
-	int i,len;
-	char c;
-	int mnuc;
-	
-	//find out if this is a SNP, and what the observed alleles are
-	sscanf(line,"%*s\t%*s\t%*s\t%s\t%s",allele1,allele2);
-	if(strlen(allele1)>1){
-		return(1); //not a SNP
-	}
-	if(strncmp(allele2,".",1)==0){
-		return(1); //not a SNP
-	}
-//	fprintf(stdout,"%s\t%s\t%d\t%d\t",allele1,allele2,(int)strlen(allele1),(int)strlen(allele2));
-	nuc[0]=allele1[0];
-	//allele2 might be a comma-separated list
-	if((len=(int)strlen(allele2))>1){
-		i=0;
-		mnuc=1;
-		while(i<=len-1){
-			c=allele2[i];
-			if(i==len-1 || allele2[i+1]==','){
-				if(mnuc>maxnuc){
-					fprintf(stderr,"Error: too many different nucleotides given\n");
-					return(-1);
-				}
-				nuc[mnuc]=c;
-				mnuc++;
-			}
-			else {
-				return(1); //not a SNP
-			}
-			i=i+2;
-		}
-	}
-	else { //strlen(allele2)==1
-		nuc[1]=allele2[0];
-		mnuc=2;
-	}
-//	fprintf(stdout,"--%d--",mnuc);
-	*nnuc=mnuc;
-	return(0);
 }
 
 void write_contig(FILE *outfile, Contig contig, int n3, int n4, double theta)
@@ -303,23 +257,17 @@ void write_contig(FILE *outfile, Contig contig, int n3, int n4, double theta)
 int main(int argc, char *argv[]) 
 {
 	FILE *fp,*outfile;
-	int CUR_MAX = 4095;
-	int NCONTIG_BATCH = 100;
-	int ncontigs_allocated;
 	std::string line;
-	int npolysites,n3,n4;
+	int n3,n4;
 	double theta;
 	int ncontigs,totsites=0;
-	int count = 0; 
-	int length = 0;
-	int i,ii,j,k,l,ni,fi,firstcontig,pos,t,itemp;
+	int i,j,k,l,ni,firstcontig,pos;
 	int nfem,nmal,ifem,imal,nplus=0,chrpos;
 	int *sex,*foundsex;
-	int ch;
-	char c,oldc;
-	char **name,**femname,**malname,**sitename;
+	int c;
+	char **name,**femname,**malname;
 	int *ffound,*mfound;
-	int nI=0,nJ,nf,nm,nfound; //number of individuals
+	int nJ,nf,nm,nfound; //number of individuals
 	int randomise=0,ri,tempsex,datafmt;
 	int val,nnuc,maxnuc=5; //A, T, G, C, or N
 	char nuc[maxnuc];
@@ -389,7 +337,6 @@ int main(int argc, char *argv[])
 
 	//genotype file reading
 	l=0; //line number
-	ch='a';
 		
 	firstcontig=1;
 	k=0;
@@ -524,7 +471,7 @@ int main(int argc, char *argv[])
 		}
 		free(name);
 		k++;
-		fprintf(stdout,"%d contigs, %d polymorphic sites, and still reading...\n",k,totsites);
+		fprintf(stdout,"Read %d contigs and %d polymorphic sites\n",k,totsites);
 		
 		
 		for (ifem=0;ifem<nfem;ifem++) {
