@@ -36,4 +36,5 @@ fisher: fisher.c reading.o calc.o
 	$(CC) -Wall -o fisher -lm reading.o calc.o fisher.c
 gen2fas: gen2fas.c reading.o
 	$(CC) -Wall -o gen2fas reading.o gen2fas.c
-
+vcfhet: reading.o vcfhet.cpp
+	$(CXX) -Wall -o vcfhet -lm reading.o vcfhet.cpp

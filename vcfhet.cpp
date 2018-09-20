@@ -5,19 +5,149 @@
 #include "reading.h"
 #include "types.h"
 
+struct GenotypeInformation {
+	int heterozygoussites;
+	int homozygoussites;
+	int nongenotypessites;
+};
+
+void countandoutput(FILE *outfile,ContigGenotypes contiggenotypes,int window)
+{
+	int t,i,ii,pos,ipos,npos,lastpos,nind,nobs;
+	double theta,a;
+	char nuc1, nuc2;
+	int nA,nT,nC,nG,nN,div,missingsites=0,nsites=0;
+	std::vector<GenotypeInformation> genotypeinformation;
+	static int times=0;
+	
+	nind=contiggenotypes.individuals.size();
+	if(times==0){
+		fprintf(outfile,"Contig\tlastsite\tn_sites\tmissing_sites\ttheta");
+		for (i=0; i<nind; i++){
+			fprintf(outfile,"\t%s_het",contiggenotypes.individuals[i].name.data());
+			fprintf(outfile,"\t%s_hom",contiggenotypes.individuals[i].name.data());
+			fprintf(outfile,"\t%s_N",contiggenotypes.individuals[i].name.data());
+		}
+		fprintf(outfile,"\n");		
+	}
+	npos=contiggenotypes.genotypes.size();
+	if(npos>0){
+		for (i=0; i<nind; i++){
+			GenotypeInformation tmpgenotypeinfo;
+			tmpgenotypeinfo.heterozygoussites=0;
+			tmpgenotypeinfo.homozygoussites=0;
+			tmpgenotypeinfo.nongenotypessites=0;
+			genotypeinformation.push_back(tmpgenotypeinfo);
+		}
+		ipos=0;
+		pos=contiggenotypes.genotypes[ipos].position;
+		lastpos=contiggenotypes.genotypes[npos-1].position;
+		theta=0;
+		for(t=1;t<=lastpos;t++){
+			if(t==pos){ //we have the genotypes
+				nA=nT=nG=nC=nN=0;
+				nobs=0;
+				for (i=0; i<nind; i++){
+					nuc1=contiggenotypes.genotypes[ipos].individualgenotypes[i].nucleotides[0];
+					nuc2=contiggenotypes.genotypes[ipos].individualgenotypes[i].nucleotides[1];
+					if (nuc1!=nuc2){
+						genotypeinformation[i].heterozygoussites++;
+						nobs++;
+					}
+					else if (nuc1=='N' || nuc1=='n'){
+						genotypeinformation[i].nongenotypessites++;
+					}
+					else {
+						genotypeinformation[i].homozygoussites++;
+						nobs++;
+					}
+					for (ii=0; ii<2; ii++){
+						switch (contiggenotypes.genotypes[ipos].individualgenotypes[i].nucleotides[ii]) {
+						case 'A' :
+							nA++;
+							break;
+						case 'T' :
+							nT++;
+							break;
+						case 'G' :
+							nG++;
+							break;
+						case 'C' :
+							nC++;
+							break;
+						case 'n' :
+						case 'N' :
+							nN++;
+							break;
+						default :
+							fprintf(stderr,"Error in parsing genotypes at position %d of contig %s\n",contiggenotypes.genotypes[ipos].position,contiggenotypes.name.data());
+							fprintf(stderr,"allowed are only A, T, G, C, and N (or n).\n");
+							fprintf(stderr,"Found %c instead\n",contiggenotypes.genotypes[ipos].individualgenotypes[i].nucleotides[ii]);
+							exit(1);
+						}
+					}
+				}
+				div=0;
+				if (nA>0) {
+					div++;
+				}
+				if (nT>0) {
+					div++;
+				}
+				if (nG>0) {
+					div++;
+				}
+				if (nC>0) {
+					div++;
+				}
+				if (div > 1) {
+					a=1.;
+					for (i=2; i<2*nobs; i++){
+						a+=1./(double)i;
+					}
+					theta+=1./a;
+				}
+				
+				ipos++;
+				pos=contiggenotypes.genotypes[ipos].position;
+			}
+			else { //we don't have the genotypes
+				missingsites++;
+			}
+			nsites++;
+			if(t==lastpos || t % window == 0){ //output
+				//								theta/=(double)window;
+				fprintf(outfile,"%s\t%d\t%d\t%d\t%f",contiggenotypes.name.data(),t,nsites,missingsites,theta);
+				for (i=0; i<nind; i++){
+					fprintf(outfile,"\t%d",genotypeinformation[i].heterozygoussites);
+					fprintf(outfile,"\t%d",genotypeinformation[i].homozygoussites);
+					fprintf(outfile,"\t%d",genotypeinformation[i].nongenotypessites);
+					genotypeinformation[i].heterozygoussites=0;
+					genotypeinformation[i].homozygoussites=0;
+					genotypeinformation[i].nongenotypessites=0;
+				}
+				fprintf(outfile,"\n");
+				theta=0;
+				missingsites=0;
+				nsites=0;
+			}							
+		}
+	}
+	times++;
+}
+
+
 int main(int argc, char *argv[]) 
 {
 	FILE *fp,*outfile;
 	std::string line;
 	char **names;
-	int t,c,i,ii,l,j,nJ,pos,ipos,npos,lastpos,nind,k,chrpos,ni,firstcontig,ncontigs;
-	int *sex,*het;
-	double theta,a;
+	int c,i,l,chrpos,ni,firstcontig;
+	int *sex;
 	int val,nnuc,maxnuc=5; //A, T, G, C, or N
 	char nuc[maxnuc];
 	char chrom[1000];
 	ContigGenotypes contiggenotypes;
-	int nA,nT,nC,nG,nN,div;
 	int window=1000;
 	
 	for(i=0;i<argc;i++) {
@@ -33,7 +163,6 @@ int main(int argc, char *argv[])
 		exit(1);
 	}	
 	
-	k=0;
 	l=0; //line number
 	firstcontig=0;
 	
@@ -51,10 +180,6 @@ int main(int argc, char *argv[])
 		if( strncmp(line.data(),"#CHROM",6)==0 ) { //only one line with individual names in vcf file				
 			names=getvcfnames(line.data(),&ni);
 			if((sex=(int *)calloc((size_t)(ni),sizeof(int)))==NULL) { 
-				fprintf(stderr,"error in memory allocation\n");
-				exit(1);
-			}
-			if((het=(int *)calloc((size_t)(ni),sizeof(int)))==NULL) { 
 				fprintf(stderr,"error in memory allocation\n");
 				exit(1);
 			}
@@ -84,106 +209,17 @@ int main(int argc, char *argv[])
 				tempgenotypes.position=chrpos;
 				tempgenotypes.individualgenotypes=vcfgenotypes(ni,sex,line.data(),nuc,maxnuc);
 				contiggenotypes.genotypes.push_back(tempgenotypes);
-				j++;				
 			}
 			else { //new contig
 				//treat last read contig
 				if (firstcontig!=1){
 					fprintf(stdout,"Treating contig %s...\n",contiggenotypes.name.data());
-					nJ=j;
-					if(nJ>0){
-						ipos=0;
-						npos=contiggenotypes.genotypes.size();
-						nind=contiggenotypes.individuals.size();
-						pos=contiggenotypes.genotypes[ipos].position;
-						lastpos=contiggenotypes.genotypes[npos-1].position;
-						theta=0;
-						for(t=1;t<=lastpos;t++){
-							if(t % window == 0){ //output
-								theta/=(double)window;
-								fprintf(outfile,"%s\t%d\t%f",contiggenotypes.name.data(),t,theta);
-								for (i=0; i<nind; i++){
-									if (het[i]>0){
-//										fprintf(outfile,"\t%f",(double)het[i]/double(window));
-										fprintf(outfile,"\t%d",het[i]);
-										het[i]=0;
-									}
-									else {
-										fprintf(outfile,"\t%d",0);
-									}
-								}
-								fprintf(outfile,"\n");
-								theta=0;
-							}
-							if(t==pos){ //we have the genotypes
-								nA=nT=nG=nC=nN=0;
-								for (i=0; i<nind; i++){ 
-									if (contiggenotypes.genotypes[ipos].individualgenotypes[i].nucleotides[0]!=contiggenotypes.genotypes[ipos].individualgenotypes[i].nucleotides[1]){
-										het[i]++;
-									}
-									for (ii=0; ii<2; ii++){
-										switch (contiggenotypes.genotypes[ipos].individualgenotypes[i].nucleotides[ii]) {
-										case 'A' :
-											nA++;
-											break;
-										case 'T' :
-											nT++;
-											break;
-										case 'G' :
-											nG++;
-											break;
-										case 'C' :
-											nC++;
-											break;
-										case 'n' :
-										case 'N' :
-											nN++;
-											break;
-										default :
-											fprintf(stderr,"Error in parsing genotypes at position %d of contig %s\n",contiggenotypes.genotypes[j].position,contiggenotypes.name.data());
-											fprintf(stderr,"allowed are only A, T, G, C, and N (or n).\n");
-											fprintf(stderr,"Found %c instead\n",contiggenotypes.genotypes[j].individualgenotypes[i].nucleotides[ii]);
-											exit(1);
-										}
-									}
-								}
-								div=0;
-								if (nA>0) {
-									div++;
-								}
-								if (nT>0) {
-									div++;
-								}
-								if (nG>0) {
-									div++;
-								}
-								if (nC>0) {
-									div++;
-								}
-								if (div > 1) {
-									a=1.;
-									for (i=2; i<2*nind; i++){
-										a+=1./(double)i;
-									}
-									theta+=1./a;
-								}
-								
-								ipos++;
-								pos=contiggenotypes.genotypes[ipos].position;
-							}
-							else { //we don't have the genotypes; suppose the site is monoallelic
-							}
-						}
-						
-						
-						contiggenotypes.genotypes.clear();
-					}
-					k++;
+					countandoutput(outfile,contiggenotypes,window);
+					contiggenotypes.genotypes.clear();
 				}
 				
 				contiggenotypes.name=chrom;
 				firstcontig=0;
-				j=0;				
 				
 				//read first line
 				
@@ -201,24 +237,19 @@ int main(int argc, char *argv[])
 				tempgenotypes.position=chrpos;
 				tempgenotypes.individualgenotypes=vcfgenotypes(ni,sex,line.data(),nuc,maxnuc);
 				contiggenotypes.genotypes.push_back(tempgenotypes);
-				j++;
 			}
 		}
 	}
-	nJ=j;
 	
 	//Filtering polymorphisms for the last contig	
-	if(nJ>0){
-	}
-	ncontigs=k+1;
-	fprintf(stdout,"Read %d contigs\n",ncontigs);	
+	fprintf(stdout,"Treating contig %s...\n",contiggenotypes.name.data());
+	countandoutput(outfile,contiggenotypes,window);
 
 	for(i=0; i<ni; i++){
 		free(names[i]);
 	}
 	free(names);
 	free(sex);
-	free(het);
 
 	fclose(fp);
 	fclose(outfile);
