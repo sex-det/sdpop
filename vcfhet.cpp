@@ -14,7 +14,7 @@ struct GenotypeInformation {
 void countandoutput(FILE *outfile,ContigGenotypes contiggenotypes,int window)
 {
 	int t,i,ii,pos,ipos,npos,lastpos,nind,nobs;
-	double theta,a;
+	double theta,a,pi,pis;
 	char nuc1, nuc2;
 	int nA,nT,nC,nG,nN,div,missingsites=0,nsites=0;
 	std::vector<GenotypeInformation> genotypeinformation;
@@ -22,7 +22,7 @@ void countandoutput(FILE *outfile,ContigGenotypes contiggenotypes,int window)
 	
 	nind=contiggenotypes.individuals.size();
 	if(times==0){
-		fprintf(outfile,"Contig\tlastsite\tn_sites\tmissing_sites\ttheta");
+		fprintf(outfile,"Contig\tlastsite\tn_sites\tmissing_sites\ttheta\tpi");
 		for (i=0; i<nind; i++){
 			fprintf(outfile,"\t%s_het",contiggenotypes.individuals[i].name.data());
 			fprintf(outfile,"\t%s_hom",contiggenotypes.individuals[i].name.data());
@@ -42,7 +42,8 @@ void countandoutput(FILE *outfile,ContigGenotypes contiggenotypes,int window)
 		ipos=0;
 		pos=contiggenotypes.genotypes[ipos].position;
 		lastpos=contiggenotypes.genotypes[npos-1].position;
-		theta=0;
+		theta=0.;
+		pi=0.;
 		for(t=1;t<=lastpos;t++){
 			if(t==pos){ //we have the genotypes
 				nA=nT=nG=nC=nN=0;
@@ -106,6 +107,14 @@ void countandoutput(FILE *outfile,ContigGenotypes contiggenotypes,int window)
 						a+=1./(double)i;
 					}
 					theta+=1./a;
+					pis=nA*nT;
+					pis+=nA*nC;
+					pis+=nA*nG;
+					pis+=nT*nC;
+					pis+=nT*nG;
+					pis+=nG*nC;
+					pis*=(2./(double)(2*nobs*(2*nobs-1)));
+					pi+=pis;
 				}
 				
 				ipos++;
@@ -115,9 +124,9 @@ void countandoutput(FILE *outfile,ContigGenotypes contiggenotypes,int window)
 				missingsites++;
 			}
 			nsites++;
-			if(t==lastpos || t % window == 0){ //output
+			if(t==lastpos || (window > 0 && t % window == 0)){ //output
 				//								theta/=(double)window;
-				fprintf(outfile,"%s\t%d\t%d\t%d\t%f",contiggenotypes.name.data(),t,nsites,missingsites,theta);
+				fprintf(outfile,"%s\t%d\t%d\t%d\t%f\t%f",contiggenotypes.name.data(),t,nsites,missingsites,theta,pi);
 				for (i=0; i<nind; i++){
 					fprintf(outfile,"\t%d",genotypeinformation[i].heterozygoussites);
 					fprintf(outfile,"\t%d",genotypeinformation[i].homozygoussites);
@@ -128,6 +137,7 @@ void countandoutput(FILE *outfile,ContigGenotypes contiggenotypes,int window)
 				}
 				fprintf(outfile,"\n");
 				theta=0;
+				pi=0;
 				missingsites=0;
 				nsites=0;
 			}							
@@ -154,6 +164,15 @@ int main(int argc, char *argv[])
 		fprintf(stdout,"%s ",argv[i]);
 	}
 	fprintf(stdout,"\n");
+	
+	fprintf(stdout,"This program gives nucleotide diversity and heterozygosity counts for all the samples in a vcf file.\n");
+	fprintf(stdout,"Note that theta a pi values are given as the sums of sites in the window.\n");
+	fprintf(stdout,"It's up to the user to decide if these should be divided by the window size, or only by the sites for which genotypes were available.\n");
+		
+	if (argc != 4) {
+		fprintf(stdout,"Usage: %s infile outfile windowsize\n",argv[0]);
+		exit(1);
+	}
 	if((fp=fopen(argv[1],"r"))==NULL){
 		fprintf(stderr,"error opening input file %s\n",argv[1]);
 		exit(1);
@@ -162,9 +181,16 @@ int main(int argc, char *argv[])
 		fprintf(stderr,"error opening output file %s\n",argv[2]);
 		exit(1);
 	}	
-	
+	window=atoi(argv[3]);
+	if(window==0){
+		printf("calculating statistics per contig\n");
+	}
+	else {
+		printf("window size: %d\n",window);
+	}
+
 	l=0; //line number
-	firstcontig=0;
+	firstcontig=1;
 	
 	while ((c = std::fgetc(fp)) != EOF) { //loop through the file
 		line="";
