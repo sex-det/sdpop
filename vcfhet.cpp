@@ -6,23 +6,24 @@
 #include "types.h"
 
 struct GenotypeInformation {
-	int heterozygoussites;
-	int homozygoussites;
-	int nongenotypessites;
+	int heterozygoussites = 0;
+	int homozygoussites = 0;
+	int nongenotypessites = 0;
+	
+	GenotypeInformation() = default;
 };
 
-void countandoutput(FILE *outfile,ContigGenotypes contiggenotypes,int window)
+void countandoutput(FILE *outfile,const ContigGenotypes & contiggenotypes,int window)
 {
-	int t,i,ii,pos,ipos,npos,lastpos,nind,nobs;
+	int t,i,ii,pos,ipos,npos,lastpos,nobs;
 	double theta,a,pi,pis;
 	char nuc1, nuc2;
-	int nA,nT,nC,nG,nN,div,missingsites=0,nsites=0;
-	std::vector<GenotypeInformation> genotypeinformation;
+	int nA,nT,nC,nG,nN,div,missingsites=0,nsites=0,Nsites=0;
 	static int times=0;
 	
-	nind=contiggenotypes.individuals.size();
+	int nind=contiggenotypes.individuals.size();
 	if(times==0){
-		fprintf(outfile,"Contig\tlastsite\tn_sites\tmissing_sites\ttheta\tpi");
+		fprintf(outfile,"Contig\tlastsite\tsites\tnot_sites\tmissing_sites\ttheta\tpi");
 		for (i=0; i<nind; i++){
 			fprintf(outfile,"\t%s_het",contiggenotypes.individuals[i].name.data());
 			fprintf(outfile,"\t%s_hom",contiggenotypes.individuals[i].name.data());
@@ -32,13 +33,7 @@ void countandoutput(FILE *outfile,ContigGenotypes contiggenotypes,int window)
 	}
 	npos=contiggenotypes.genotypes.size();
 	if(npos>0){
-		for (i=0; i<nind; i++){
-			GenotypeInformation tmpgenotypeinfo;
-			tmpgenotypeinfo.heterozygoussites=0;
-			tmpgenotypeinfo.homozygoussites=0;
-			tmpgenotypeinfo.nongenotypessites=0;
-			genotypeinformation.push_back(tmpgenotypeinfo);
-		}
+		std::vector<GenotypeInformation> genotypeinformation (nind, GenotypeInformation());
 		ipos=0;
 		pos=contiggenotypes.genotypes[ipos].position;
 		lastpos=contiggenotypes.genotypes[npos-1].position;
@@ -116,6 +111,9 @@ void countandoutput(FILE *outfile,ContigGenotypes contiggenotypes,int window)
 					pis*=(2./(double)(2*nobs*(2*nobs-1)));
 					pi+=pis;
 				}
+				if(nobs*2==nN){
+					Nsites++;
+				}
 				
 				ipos++;
 				pos=contiggenotypes.genotypes[ipos].position;
@@ -126,19 +124,18 @@ void countandoutput(FILE *outfile,ContigGenotypes contiggenotypes,int window)
 			nsites++;
 			if(t==lastpos || (window > 0 && t % window == 0)){ //output
 				//								theta/=(double)window;
-				fprintf(outfile,"%s\t%d\t%d\t%d\t%f\t%f",contiggenotypes.name.data(),t,nsites,missingsites,theta,pi);
+				fprintf(outfile,"%s\t%d\t%d\t%d\t%d\t%f\t%f",contiggenotypes.name.data(),t,nsites,Nsites,missingsites,theta,pi);
 				for (i=0; i<nind; i++){
 					fprintf(outfile,"\t%d",genotypeinformation[i].heterozygoussites);
 					fprintf(outfile,"\t%d",genotypeinformation[i].homozygoussites);
 					fprintf(outfile,"\t%d",genotypeinformation[i].nongenotypessites);
-					genotypeinformation[i].heterozygoussites=0;
-					genotypeinformation[i].homozygoussites=0;
-					genotypeinformation[i].nongenotypessites=0;
+					genotypeinformation[i] = GenotypeInformation(); 
 				}
 				fprintf(outfile,"\n");
 				theta=0;
 				pi=0;
 				missingsites=0;
+				Nsites=0;
 				nsites=0;
 			}							
 		}
