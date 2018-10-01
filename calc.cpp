@@ -53,7 +53,7 @@ double* errormult(double ematrix[3][3], double x[3]) {
 	return vector;
 }
 
-void CondSiteProbs(std::vector<Contig>& contigs, double Q[3][3], double *****P, long double ***condsiteprob)
+void CondSiteProbs(std::vector<Contig>& contigs, const Model model, double Q[3][3], double *****P, long double ***condsiteprob)
 {
 	int k,t,jl,s,g,gp;
 //	unsigned int *nmulti;
@@ -63,7 +63,8 @@ void CondSiteProbs(std::vector<Contig>& contigs, double Q[3][3], double *****P, 
 	for (k=0;k<contigs.size();k++) {
 		Contig & current_contig = contigs[k];
 		for(t=0;t<current_contig.snps.size();t++){
-			for(jl=0;jl<JLTYPES;jl++) {
+			foreach_jl(model,[&](const auto jl){
+			//for(jl=0;jl<JLTYPES;jl++) {
 				//				nmulti=vectorize_ui(polysite[k][t][N11F],polysite[k][t][N12F],polysite[k][t][N22F]);
 				//				pmulti=vectorize_d(P[k][t][FEMALE][jl][0],P[k][t][FEMALE][jl][1],P[k][t][FEMALE][jl][2]);
 				//				emulti=errormult(Q, pmulti);
@@ -102,35 +103,56 @@ void CondSiteProbs(std::vector<Contig>& contigs, double Q[3][3], double *****P, 
 						}
 					}
 				}
-			}
+			});
 		}
 	}
 }
 
-void CondSegProbs(std::vector<Contig>& contigs, double *rho, long double ***condsiteprob, long double ***condsegprob)
+void CondSegProbs(std::vector<Contig>& contigs, const Model model, double **rho, long double ***condsiteprob, long double ***condsegprob)
 {
 	int k,t,l,j;
 	
 	for (k=0;k<contigs.size();k++) {
 		Contig & current_contig = contigs[k];
 		for(t=0;t<current_contig.snps.size();t++){
-			condsegprob[k][t][J_AUTO]=condsiteprob[k][t][JL_AUTO];
-			condsegprob[k][t][J_HAPLOID]=condsiteprob[k][t][JL_HAPLOID];
-			condsegprob[k][t][J_PARA]=(long double)0.5*(condsiteprob[k][t][JL_PARA1]+condsiteprob[k][t][JL_PARA2]);	
-			condsegprob[k][t][J_HEMI]=condsiteprob[k][t][JL_HEMI];
-			condsegprob[k][t][J_SEX]=0;
-			for(l=0;l<LTYPES;l++) {
-				condsegprob[k][t][J_SEX]+=(long double)rho[l]*condsiteprob[k][t][JL_SEX1+l];
-			}
-			for(j=0;j<JTYPES;j++){
-			if(isnan(condsegprob[k][t][j])){
-				fprintf(stdout,"NaN produced: contig %d, site %d, type %d: %Lf\n",k,t,j,condsegprob[k][t][j]);
-				exit(1);
-			}
-			else if(isinf(condsegprob[k][t][j])){
-				fprintf(stdout,"Inf produced: contig %d, site %d, type %d: %Lf\n",k,t,j,condsegprob[k][t][j]);
-			}
-			}
+			foreach_j(model,[&](const auto j){
+					if(j==J_AUTO){
+						condsegprob[k][t][j]=condsiteprob[k][t][JL_AUTO];
+					}
+					if(j==J_HAPLOID){
+						condsegprob[k][t][j]=condsiteprob[k][t][JL_HAPLOID];
+					}
+					if(j==J_PARA){
+						condsegprob[k][t][j]=(long double)0.5*(condsiteprob[k][t][JL_PARA1]+condsiteprob[k][t][JL_PARA2]);
+					}
+					if(j==J_HEMI){
+						condsegprob[k][t][j]=condsiteprob[k][t][JL_HEMI];
+					}
+					if(j==J_SEX){
+						condsegprob[k][t][j]=0;
+						for(l=0;l<4;l++) {
+							condsegprob[k][t][j]+=(long double)rho[j][l]*condsiteprob[k][t][JL_SEX1+l];
+						}
+					}
+					if(j==J_ZHEMI){
+						condsegprob[k][t][j]=condsiteprob[k][t][JL_ZHEMI];
+					}
+					if(j==J_ZW){
+						condsegprob[k][t][j]=0;
+						for(l=0;l<4;l++) {
+							condsegprob[k][t][j]+=(long double)rho[j][l]*condsiteprob[k][t][JL_ZW1+l];
+						}
+					}
+			});
+			foreach_j(model,[&](const auto j){
+					if(isnan(condsegprob[k][t][j])){
+						fprintf(stdout,"NaN produced: contig %d, site %d, type %d: %Lf\n",k,t,j,condsegprob[k][t][j]);
+						exit(1);
+					}
+					else if(isinf(condsegprob[k][t][j])){
+						fprintf(stdout,"Inf produced: contig %d, site %d, type %d: %Lf\n",k,t,j,condsegprob[k][t][j]);
+					}
+			});
 		}
 	}
 }
@@ -154,6 +176,11 @@ void loghorner(int length, int lmax, long double* logarray, double* param, doubl
 	long double tot,ltot;
 	int i,n;
 	//	long double temp[3];
+	if(lmax<0 || lmax >=length){
+		fprintf(stderr,"Error (loghorner): a non-valid maximum value indicator was provided\n");
+		fprintf(stderr,"indicator=%d, arraylength=%d\n",lmax,length);
+		exit(1);
+	}
 	
 	//check if non-zero likelihoods exist
 	tot=0;

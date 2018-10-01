@@ -8,6 +8,7 @@
 #include <cstdio>
 #include "types.h"
 
+#define NONE 0
 #define XY 1
 #define ZW 2
 #define FEMALE 0
@@ -19,6 +20,7 @@ char int2DNA(int i);
 int read_cnt(FILE *fp, int namelen, int chromosomes, char **contig_p, int **npolysites_p, int ****polysite_p);
 //int read_cnt2(FILE *fp, int namelen, int chromosomes, char **contig_p, int **npolysites_p, int ****polysite_p);
 //int read_cnt2(FILE *fp, int namelen, int chromosomes, std::vector<std::string>& contig_p, int **npolysites_p, int ****polysite_p);
+int read_cnt_model(FILE *fp, int namelen, const Model model, std::vector<Contig>& contigs);
 int read_cnt2(FILE *fp, int namelen, int chromosomes, std::vector<Contig>& contigs);
 char **getgennames(const char *linein, int *ni);
 char **getvcfnames(const char *linein, int *nind);

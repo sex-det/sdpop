@@ -38,3 +38,10 @@ struct ContigGenotypes {
 	std::vector<Individual> individuals;
 	std::vector<Genotypes> genotypes;
 };
+
+struct Model {
+	int haploid;
+	int paralogs;
+	int xy;
+	int zw;
+};

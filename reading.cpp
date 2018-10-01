@@ -55,6 +55,13 @@ char int2DNA(int i)
 	}
 }
 
+int read_cnt_model(FILE *fp, int namelen, const Model model, std::vector<Contig>& contigs){
+	int n=0;
+	n=read_cnt2(fp,namelen,XY,contigs);
+	return n;
+}
+
+
 //int read_cnt2(FILE *fp, int namelen, int chromosomes, char **contig_p, int **npolysites_p, int ****polysite_p) 
 int read_cnt2(FILE *fp, int namelen, int chromosomes, std::vector<Contig>& contigs) 
 //for reading cnt files that have the identity (A,T,C or G) of the alleles
@@ -98,7 +105,7 @@ int read_cnt2(FILE *fp, int namelen, int chromosomes, std::vector<Contig>& conti
 		else { //line contains counts
 				
 				SNP tempsnp;
-				if(chromosomes==XY){
+				if(chromosomes==XY || chromosomes==NONE){
 					if(sscanf(line.data(),"%d\t%c%c\t%d\t%d\t%d\t%d\t%d\t%d\t",&tempsnp.position,&nuc1,&nuc2,
 						&tempsnp.genotypes_by_sex[N11F],&tempsnp.genotypes_by_sex[N12F],
 					&tempsnp.genotypes_by_sex[N22F],&tempsnp.genotypes_by_sex[N11M],&tempsnp.genotypes_by_sex[N12M],
