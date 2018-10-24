@@ -204,10 +204,11 @@ void initEM(std::vector<Contig>& contigs) {
 						}
 						//haploid snps (mitochondria, chloroplasts...)
 						if(jl==JL_HAPLOID){
-							f=0.;
-							if(n11f+n11m>0) {
-								f=(double)(n11f+n11m)/(double)(n11f+n11m+n22f+n22m);
-							}
+//							f=0.;
+//							if(n11f+n11m>0) {
+//								f=(double)(n11f+n11m)/(double)(n11f+n11m+n22f+n22m);
+//							}
+							f=(double)(n11f+n12f+n11m+n12m)/(double)(ntot);
 							F[k][t][jl]=f;
 							P[k][t][FEMALE][jl][0]=f;
 							P[k][t][FEMALE][jl][1]=0.;
@@ -219,10 +220,11 @@ void initEM(std::vector<Contig>& contigs) {
 						//paralogous snps
 						//allele 1 is fixed in one of the paralogs
 						if(jl==JL_PARA1){
-							f=0.;
-							if(n12f+n12m>0) {
-								f=1.-sqrt(1.-(double)(n12f+n12m)/(double)(n11f+n11m+n12f+n12m));
-							}
+//							f=0.;
+//							if(n12f+n12m>0) {
+//								f=1.-sqrt(1.-(double)(n12f+n12m)/(double)(n11f+n11m+n12f+n12m));
+//							}
+							f=1.-sqrt(1.-(double)(n12f+n12m+n22f+n22m)/(double)(ntot));
 							F[k][t][jl]=f;
 							P[k][t][FEMALE][jl][0]=1.-f;
 							P[k][t][FEMALE][jl][1]=f;
@@ -233,10 +235,11 @@ void initEM(std::vector<Contig>& contigs) {
 						}
 						//allele 2 is fixed in one of the paralogs
 						if(jl==JL_PARA2){
-							f=0.;
-							if(n12f+n12m>0) {
-								f=1.-sqrt(1.-(double)(n12f+n12m)/(double)(n22f+n22m+n12f+n12m));
-							}
+//							f=0.;
+//							if(n12f+n12m>0) {
+//								f=1.-sqrt(1.-(double)(n12f+n12m)/(double)(n22f+n22m+n12f+n12m));
+//							}
+							f=1.-sqrt(1.-(double)(n12f+n12m+n11f+n11m)/(double)(ntot));
 							F[k][t][jl]=f;
 							P[k][t][FEMALE][jl][0]=0.;
 							P[k][t][FEMALE][jl][1]=f;
@@ -247,8 +250,8 @@ void initEM(std::vector<Contig>& contigs) {
 						}
 						//x-hemizygous snps. f is the frequency of allele 1 (symmetry)
 						if(jl==JL_HEMI){
-							//				f=(double)(2*n11f+n12f+n11m)/(double)(2*nfem+nmal);
-							f=(double)(2*n11f+n12f+n11m)/(double)(2*nfem+n11m+n22m);
+//							f=(double)(2*n11f+n12f+n11m)/(double)(2*nfem+n11m+n22m);
+							f=(double)(2*n11f+n12f+n11m+n12m)/(double)(2*nfem+nmal);
 							F[k][t][jl]=f;
 							P[k][t][FEMALE][jl][0]=f*f;
 							P[k][t][FEMALE][jl][1]=2.*f*(1.-f);
@@ -260,7 +263,8 @@ void initEM(std::vector<Contig>& contigs) {
 						//x/y snsp ; x-polymorphism
 						//allele 1 is fixed on Y; f is the frequency of allele 2 on X
 						if(jl==JL_SEX1){
-							f=(double)(2*n22f+n12f+n12m)/(double)(2*nfem+n11m+n12m);
+//							f=(double)(2*n22f+n12f+n12m)/(double)(2*nfem+n11m+n12m);
+							f=(double)(2*n22f+n12f+n12m+n22m)/(double)(2*nfem+nmal);
 							F[k][t][jl]=f;
 							P[k][t][FEMALE][jl][0]=(1.-f)*(1.-f);
 							P[k][t][FEMALE][jl][1]=2.*f*(1.-f);
@@ -271,7 +275,8 @@ void initEM(std::vector<Contig>& contigs) {
 						}
 						//allele 2 is fixed on Y; f is the frequency of allele 1 on X
 						if(jl==JL_SEX2){
-							f=(double)(2*n11f+n12f+n12m)/(double)(2*nfem+n12m+n22m);
+//							f=(double)(2*n11f+n12f+n12m)/(double)(2*nfem+n12m+n22m);
+							f=(double)(2*n11f+n12f+n12m+n11m)/(double)(2*nfem+nmal);
 							F[k][t][jl]=f;
 							P[k][t][FEMALE][jl][0]=f*f;
 							P[k][t][FEMALE][jl][1]=2.*f*(1.-f);
@@ -307,8 +312,8 @@ void initEM(std::vector<Contig>& contigs) {
 						}
 						//z-hemizygous snps. f is the frequency of allele 1 (symmetry)
 						if(jl==JL_ZHEMI){
-							//				f=(double)(2*n11f+n12f+n11m)/(double)(2*nfem+nmal);
-							f=(double)(2*n11m+n12m+n11f)/(double)(2*nmal+n11f+n22f);
+//							f=(double)(2*n11m+n12m+n11f)/(double)(2*nmal+n11f+n22f);
+							f=(double)(2*n11m+n12m+n11f+n12f)/(double)(2*nmal+nfem);
 							F[k][t][jl]=f;
 							P[k][t][MALE][jl][0]=f*f;
 							P[k][t][MALE][jl][1]=2.*f*(1.-f);
@@ -320,7 +325,8 @@ void initEM(std::vector<Contig>& contigs) {
 						//z/w snsp ; z-polymorphism
 						//allele 1 is fixed on W; f is the frequency of allele 2 on Z
 						if(jl==JL_ZW1){
-							f=(double)(2*n22m+n12m+n12f)/(double)(2*nmal+n11f+n12f);
+//							f=(double)(2*n22m+n12m+n12f)/(double)(2*nmal+n11f+n12f);
+							f=(double)(2*n22m+n12m+n12f+n22f)/(double)(2*nmal+nfem);
 							F[k][t][jl]=f;
 							P[k][t][MALE][jl][0]=(1.-f)*(1.-f);
 							P[k][t][MALE][jl][1]=2.*f*(1.-f);
@@ -331,7 +337,8 @@ void initEM(std::vector<Contig>& contigs) {
 						}
 						//allele 2 is fixed on W; f is the frequency of allele 1 on Z
 						if(jl==JL_ZW2){
-							f=(double)(2*n11m+n12m+n12f)/(double)(2*nmal+n12f+n22f);
+//							f=(double)(2*n11m+n12m+n12f)/(double)(2*nmal+n12f+n22f);
+							f=(double)(2*n11m+n12m+n12f+n11f)/(double)(2*nmal+nfem);
 							F[k][t][jl]=f;
 							P[k][t][MALE][jl][0]=f*f;
 							P[k][t][MALE][jl][1]=2.*f*(1.-f);
@@ -341,9 +348,8 @@ void initEM(std::vector<Contig>& contigs) {
 							P[k][t][FEMALE][jl][2]=1.-f;
 						}
 						//z/w snsp ; w-polymorphism. f is the frequency, on W, of the allele that is not fixed on Z
-						//case 1: allele 1 is fixed on Z; f3 is the frequency of allele 2 on W
+						//case 1: allele 1 is fixed on Z; f is the frequency of allele 2 on W
 						if(jl==JL_ZW3){
-							//				f= (n11m+n12m>0) ? (double)(n12m)/(double)(n11m+n12m) : 0;
 							f=(double)(n12f+n22f)/(double)(nfem);
 							F[k][t][jl]=f;
 							P[k][t][MALE][jl][0]=1.;
@@ -355,7 +361,6 @@ void initEM(std::vector<Contig>& contigs) {
 						}
 						//case 2: allele 2 is fixed on Z; f is the frequency of allele 1 on W
 						if(jl==JL_ZW4){
-							//f= (n22m+n12m>0) ? (double)(n12m)/(double)(n22m+n12m) : 0;
 							f=(double)(n12f+n11f)/(double)(nfem);
 							F[k][t][jl]=f;
 							P[k][t][MALE][jl][0]=0.;
@@ -476,16 +481,16 @@ long double totalcontigloglik(std::vector<Contig>& contigs, double *pi, double *
 							temp[j]+=logl(suml);
 						}
 					}
-				}
 					sumj+=expl(temp[j]);
+				}
 		});
-/*		if(isinf(logl(sumj))){
-			fprintf(stdout,"Infinity produced: contig %d, %d sites, %Le\n",k,npolysites[k],sumj);
-			for(j=0;j<JTYPES;j++) {
+		if(isinf(logl(sumj))){
+			fprintf(stdout,"Infinity produced: contig %d, %d sites, %Le\n",k,npolysites,sumj);
+			foreach_j(model,[&](const auto j){
 				fprintf(stdout,"%d %Le %Le\n",j,temp[j],expl(temp[j]));
-			}
+			});
 		}
-		*/
+		
 		if(sumj>LDBL_MIN){
 		loglik+=logl(sumj);
 		}
@@ -942,18 +947,18 @@ int main(int argc, char *argv[]) {
 	// Calculate conditional probabilities per site
 	CondSiteProbs(contigs,model,Q,P,condsiteprob);
 	CondSegProbs(contigs,model,rho,condsiteprob,condsegprob);
-	k=1;
-	Contig & current_contig = contigs[k];
-	npolysites=current_contig.snps.size();
-	for(t=0;t<npolysites;t++){
-				for (i=0; i<6; i++) {
-					fprintf(stdout,"%d\t",current_contig.snps[t].genotypes_by_sex[i]);
-				}
-		for(j=0;j<JTYPES;j++){
-			fprintf(stdout,"%d: %Lf;\t",j,condsegprob[k][t][j]);
-		}
-		fprintf(stdout,"\n");
-	}
+	//k=1;
+	//Contig & current_contig = contigs[k];
+	//npolysites=current_contig.snps.size();
+	//for(t=0;t<npolysites;t++){
+	//			for (i=0; i<6; i++) {
+	//				fprintf(stdout,"%d\t",current_contig.snps[t].genotypes_by_sex[i]);
+	//			}
+	//	for(j=0;j<JTYPES;j++){
+	//		fprintf(stdout,"%d: %Lf;\t",j,condsegprob[k][t][j]);
+	//	}
+	//	fprintf(stdout,"\n");
+	//}
 	
 	
 	//initial likelihood
@@ -1473,7 +1478,7 @@ int main(int argc, char *argv[]) {
 		}
 		fprintf(stdout,", log-likelihood: %Lf\n",loglik);
 		if(oldloglik > loglik){
-			fprintf(stderr,"Warning: log-likelihood decreases by %Lf\n",oldloglik-loglik);
+			fprintf(stderr,"Warning: log-likelihood decreases by %Lf; interrupting maximization and proceeding to output\n",oldloglik-loglik);
 			break;
 		}
 
@@ -1523,7 +1528,100 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	fprintf(outfile,", BIC (sites*individuals): %Lf\n",-2.*loglik+npar*log(sites_individuals));
-
+	
+	//output headers
+	fprintf(outfile,"#>contig_name\tN_sites\tmean_coverage");
+	foreach_j(model,[&](const auto j){
+			if(j==J_AUTO){
+				fprintf(outfile,"\tj_autosomal posterior_autosomal geometric_autosomal");
+			}
+			if(j==J_HAPLOID){
+				fprintf(outfile,"\tj_haploid posterior_haploid geometric_haploid");
+			}
+			if(j==J_PARA){
+				fprintf(outfile,"\tj_paralog posterior_paralog geometric_paralog");
+			}
+			if(j==J_HEMI){
+				fprintf(outfile,"\tj_xhemizygote posterior_xhemizygote geometric_xhemizygote");
+			}
+			if(j==J_ZHEMI){
+				fprintf(outfile,"\tj_zhemizygote posterior_zhemizygote geometric_zhemizygote");
+			}
+			if(j==J_SEX){
+				fprintf(outfile,"\tj_xy posterior_xy geometric_xy");
+			}
+			if(j==J_ZW){
+				fprintf(outfile,"\tj_zw posterior_zw geometric_zw");
+			}
+	});
+	fprintf(outfile,"\tmax_posterior max_geometric\n");
+	fprintf(outfile,"#position\talleles\tN11F\tN12F\tN22F\tN11M\tN12M\tN22M\t");
+	if(model.xy){
+		fprintf(outfile,"fx_max fy_max\t");
+		fprintf(outfile,"fx_mean fy_mean\t");
+	}
+	if(model.zw){
+		fprintf(outfile,"fz_max fw_max\t");
+		fprintf(outfile,"fz_mean fw_mean\t");		
+	}
+	foreach_l_xy(model,[&](const auto l,const auto jl,const auto j){
+			fprintf(outfile,"subxy_%d\t",l+1);
+	});
+	foreach_l_zw(model,[&](const auto l,const auto jl,const auto j){
+			fprintf(outfile,"subzw_%d\t",l+1);
+	});
+	if(mode==SITE){
+		foreach_j(model,[&](const auto j){
+			if(j==J_AUTO){
+				fprintf(outfile,"logL_autosomal posterior_autosomal\t");
+			}                    
+			if(j==J_HAPLOID){    
+				fprintf(outfile,"logL_haploid posterior_haploid\t");
+			}                    
+			if(j==J_PARA){       
+				fprintf(outfile,"logL_paralog posterior_paralog\t");
+			}                    
+			if(j==J_HEMI){       
+				fprintf(outfile,"logL_xhemizygote posterior_xhemizygote\t");
+			}                    
+			if(j==J_ZHEMI){      
+				fprintf(outfile,"logL_zhemizygote posterior_zhemizygote\t");
+			}                    
+			if(j==J_SEX){        
+				fprintf(outfile,"logL_xy posterior_xy\t");
+			}                    
+			if(j==J_ZW){         
+				fprintf(outfile,"logL_zw posterior_zw\t");
+			}
+		});
+	}
+	else {
+		foreach_j(model,[&](const auto j){
+			if(j==J_AUTO){
+				fprintf(outfile,"logL_autosomal\t");
+			}                    
+			if(j==J_HAPLOID){    
+				fprintf(outfile,"logL_haploid\t");
+			}                    
+			if(j==J_PARA){       
+				fprintf(outfile,"logL_paralog\t");
+			}                    
+			if(j==J_HEMI){       
+				fprintf(outfile,"logL_xhemizygote\t");
+			}                    
+			if(j==J_ZHEMI){      
+				fprintf(outfile,"logL_zhemizygote\t");
+			}                    
+			if(j==J_SEX){        
+				fprintf(outfile,"logL_xy\t");
+			}                    
+			if(j==J_ZW){         
+				fprintf(outfile,"logL_zw\t");
+			}
+		});
+	}
+	fprintf(outfile,"j_max\n",jmax);
+	
 	for (k=0;k<contigs.size();k++) {
 		Contig & current_contig = contigs[k];
 		//calculate likelihoods and posterior probabilities per contig 
@@ -1581,10 +1679,10 @@ int main(int argc, char *argv[]) {
 			}
 			foreach_j(model,[&](const auto j){
 			//for(j=0;j<JTYPES;j++) {
-				fprintf(outfile,"\t%d\t%e\t%e",j,expR[k][j],geom_score[j]);
+				fprintf(outfile,"\t%d %e %e",j+1,expR[k][j],geom_score[j]);
 			});
 //			fprintf(outfile,"\t%f\n",zscore(k,npolysites[k],polysite[k],rho,Q,lmax,1000,P[k],condsegprob[k]));			
-			fprintf(outfile,"\t%d/%d\n",jmax,lmax);
+			fprintf(outfile,"\t%d %d\n",jmax+1,lmax+1);
 			
 			for (t=0; t<npolysites; t++){
 				fprintf(outfile,"%d\t",current_contig.snps[t].position);
@@ -1620,7 +1718,7 @@ int main(int argc, char *argv[]) {
 						fx=0;
 						fy=F[k][t][JL_SEX4];
 					}
-					fprintf(outfile,"%f %f %d\t",fx,fy,lmax);
+					fprintf(outfile,"%f %f\t",fx,fy);
 					//second method: fx and fy correspond to those matching with the most probable XY segregation subtype
 					fx=expA[k][t][J_SEX][0]*(1-F[k][t][JL_SEX1])+expA[k][t][J_SEX][1]*F[k][t][JL_SEX2]+expA[k][t][J_SEX][2];				
 					fy=expA[k][t][J_SEX][0]+expA[k][t][J_SEX][2]*(1-F[k][t][JL_SEX3])+expA[k][t][J_SEX][3]*F[k][t][JL_SEX4];				
@@ -1652,44 +1750,40 @@ int main(int argc, char *argv[]) {
 						fx=0;
 						fy=F[k][t][JL_ZW4];
 					}
-					fprintf(outfile,"%f %f %d\t",fx,fy,lmax);
+					fprintf(outfile,"%f %f\t",fx,fy);
 					//second method: fx and fy correspond to those matching with the most probable XY segregation subtype
 					fx=expA[k][t][J_ZW][0]*(1-F[k][t][JL_ZW1])+expA[k][t][J_ZW][1]*F[k][t][JL_ZW2]+expA[k][t][J_ZW][2];				
 					fy=expA[k][t][J_ZW][0]+expA[k][t][J_ZW][2]*(1-F[k][t][JL_ZW3])+expA[k][t][J_ZW][3]*F[k][t][JL_ZW4];				
 					fprintf(outfile,"%f %f\t",fx,fy);
 				}
 				foreach_l_xy(model,[&](const auto l,const auto jl,const auto j){
-					//for(l=0;l<LTYPES;l++){
-						fprintf(outfile,"%f\t",expA[k][t][j][l]);
+						fprintf(outfile,"%e\t",expA[k][t][j][l]);
 				});
 				foreach_l_zw(model,[&](const auto l,const auto jl,const auto j){
-					//for(l=0;l<LTYPES;l++){
-						fprintf(outfile,"%f\t",expA[k][t][j][l]);
+						fprintf(outfile,"%e\t",expA[k][t][j][l]);
 				});
 				
 				pmax=0.0;
 				jmax=-1;
 				if(mode==SITE){
 					foreach_j(model,[&](const auto j){
-					//for(j=0;j<JTYPES;j++) {
 						if (expS[k][t][j]>pmax) {
 							jmax=j;
 							pmax=expS[k][t][j];
 						}
-						fprintf(outfile,"%Le %f\t",condsegprob[k][t][j],expS[k][t][j]);
+						fprintf(outfile,"%Lf %f\t",logl(condsegprob[k][t][j]),expS[k][t][j]);
 					});
-					fprintf(outfile,"%d\n",jmax);
+					fprintf(outfile,"%d\n",jmax+1);
 				}
 				else {
-					foreach_jl(model,[&](const auto jl){
-					//for(jl=0;jl<JLTYPES;jl++) {
-						fprintf(outfile,"%Le\t",condsiteprob[k][t][jl]);
-						if (condsiteprob[k][t][jl]>pmax) {
-							jmax=jl;
-							pmax=condsiteprob[k][t][jl];
+					foreach_j(model,[&](const auto j){
+						fprintf(outfile,"%Lf\t",logl(condsegprob[k][t][j]));
+						if (condsegprob[k][t][j]>pmax) {
+							jmax=j;
+							pmax=condsegprob[k][t][j];
 						}
 					});
-					fprintf(outfile,"%d\n",jmax);
+					fprintf(outfile,"%d\n",jmax+1);
 				}
 			}
 			//		}
@@ -1707,17 +1801,6 @@ int main(int argc, char *argv[]) {
     free(rhodelta);
 
 	freeEM(contigs);
-//	free(contig);
-//	for(k=0;k<ncontigs;k++) {
-//		if(npolysites[k]>0) {
-//			for(t=0; t<npolysites[k]; t++){
-//				free(polysite[k][t]);
-//			}
-//			free(polysite[k]);
-//		}
-//	}
-//	free(polysite);
-//	free(npolysites);
 	free(geom_score);
 
 	return 0;
