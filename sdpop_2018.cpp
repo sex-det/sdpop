@@ -1002,7 +1002,7 @@ int main(int argc, char *argv[]) {
 			if((npolysites=current_contig.snps.size())>0) {
 				// para, XY and ZW detailed types
 					for(t=0;t<npolysites;t++){
-						if(model.xy){
+						if(model.xy && pi[J_SEX]>minimumvalue){
 							maxl=-INFINITY;
 							lmax=-1;
 							foreach_l_xy(model,[&](const auto l,const auto jl,const auto j){
@@ -1037,7 +1037,7 @@ int main(int argc, char *argv[]) {
 									}
 							});
 						}
-						if(model.zw){
+						if(model.zw && pi[J_ZW]>minimumvalue){
 							maxl=-INFINITY;
 							lmax=-1;
 							foreach_l_zw(model,[&](const auto l,const auto jl,const auto j){
