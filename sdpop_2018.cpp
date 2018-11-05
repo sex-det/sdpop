@@ -682,7 +682,7 @@ int contigCONTIGprobs(int nj,int nt,long double **csp,long double *temp)
 						temp[j]+=logl(csp[t][j]);
 //						temp[j]*=csp[t][j];
 					}
-					if(temp[j]>maxj){
+					if(temp[j]>=maxj){
 						maxj=temp[j];
 						jmax=j;
 					}			
@@ -701,7 +701,7 @@ int SITEprobs(int nj,long double *csp, long double *temp)
 	//for(j=0;j<nj;j++) {
 		temp[j]=logl(csp[j]);
 		//						temp[j]=csp[j];
-		if(temp[j]>maxj){
+		if(temp[j]>=maxj){
 			maxj=temp[j];
 			jmax=j;
 		}
@@ -1009,7 +1009,7 @@ int main(int argc, char *argv[]) {
 									//for(l=0;l<LTYPES;l++) {
 									templ[l]=logl(condsiteprob[k][t][jl]);
 									//templ[l]=condsiteprob[k][t][j+l];
-									if(templ[l]>maxl){
+									if(templ[l]>=maxl){
 										maxl=templ[l];
 										lmax=l;
 									}
@@ -1044,21 +1044,21 @@ int main(int argc, char *argv[]) {
 									//for(l=0;l<LTYPES;l++) {
 									templ[l]=logl(condsiteprob[k][t][jl]);
 									//templ[l]=condsiteprob[k][t][j+l];
-									if(templ[l]>maxl){
+									if(templ[l]>=maxl){
 										maxl=templ[l];
 										lmax=l;
 									}
 							});
 							loghorner(4,lmax,templ,rho[J_ZW],expA[k][t][J_ZW]);
 						}
-						if(model.paralogs){
+						if(model.paralogs && pi[J_PARA]>minimumvalue){
 							maxl=-INFINITY;
 							lmax=-1;
 							foreach_l_para(model,[&](const auto l,const auto jl,const auto j){
 									//for(l=0;l<LTYPES;l++) {
 									templ[l]=logl(condsiteprob[k][t][jl]);
 									//templ[l]=condsiteprob[k][t][j+l];
-									if(templ[l]>maxl){
+									if(templ[l]>=maxl){
 										maxl=templ[l];
 										lmax=l;
 									}
@@ -1164,7 +1164,7 @@ int main(int argc, char *argv[]) {
 								for(gp=0;gp<3;gp++){
 									temp[gp]=logl((long double)P[k][t][s][jl][gp]);
 									//								sumgp+=temp[gp];
-									if(temp[gp]>maxgp){
+									if(temp[gp]>=maxgp){
 										maxgp=temp[gp];
 										gpmax=gp;
 									}
@@ -1620,7 +1620,7 @@ int main(int argc, char *argv[]) {
 			}
 		});
 	}
-	fprintf(outfile,"j_max\n",jmax);
+	fprintf(outfile,"j_max\n");
 	
 	for (k=0;k<contigs.size();k++) {
 		Contig & current_contig = contigs[k];
@@ -1647,7 +1647,7 @@ int main(int argc, char *argv[]) {
 						sumL+=log(condsegprob[k][t][j]);
 					}
 					temp[j]=sumL/npolysites;
-					if(expl(temp[j])>pmax){
+					if(expl(temp[j])>=pmax){
 							pmax=expl(temp[j]);
 							jmax=j;
 					}
