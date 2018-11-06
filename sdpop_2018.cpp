@@ -732,6 +732,7 @@ int main(int argc, char *argv[]) {
 	double U[3][3],Usim,Udis;
 	int ni,npi=1,sites_individuals,npar;
 	double *geom_score;
+	int warning=0;
 
 	std::vector<Contig> contigs;
 
@@ -992,7 +993,7 @@ int main(int argc, char *argv[]) {
 	
 	it=0;
 	plateausteps=0;
-	while(plateausteps<10){
+	while(plateausteps<10 && warning!=1){
 		it++;
 		fprintf(stdout,"Iteration %d: ",it);
 
@@ -1030,7 +1031,7 @@ int main(int argc, char *argv[]) {
 										fprintf(stderr,"%d %f %Le\t",j,pi[j],condsegprob[k][t][j]);
 										});
 										fprintf(stderr,"\n");
-										exit(1);
+										warning=1;
 									}
 									else if(isinf(expA[k][t][j][l])){
 										fprintf(stderr,"Inf produced (expA): contig %d, site %d, type %d, subtype %d (%d): %e\n",k,current_contig.snps[t].position,j,jl,l,expA[k][t][j][l]);
@@ -1089,7 +1090,7 @@ int main(int argc, char *argv[]) {
 										fprintf(stderr,"%d %f %Le\t",j,pi[j],condsegprob[k][t][j]);
 										});
 										fprintf(stderr,"\n");
-										exit(1);
+										warning=1;
 									}
 									else if(isinf(expS[k][t][j])){
 										fprintf(stderr,"Inf produced (expS): contig %d, site %d, type %d: %f\n",k,current_contig.snps[t].position,j,expS[k][t][j]);
@@ -1119,7 +1120,7 @@ int main(int argc, char *argv[]) {
 					foreach_j(model,[&](const auto j){
 						if(isnan(expR[k][j])){
 							fprintf(stderr,"NaN produced (expR): contig %d, type %d: %f\n",k,j,expR[k][j]);
-							exit(1);
+							warning=1;
 						}
 						else if(isinf(expR[k][j])){
 							fprintf(stderr,"Inf produced (expR): contig %d, type %d: %f\n",k,j,expR[k][j]);
@@ -1180,7 +1181,7 @@ int main(int argc, char *argv[]) {
 									for(gp=0;gp<3;gp++){
 									if(isnan(expTG[k][t][s][jl][g][gp])){
 										fprintf(stderr,"NaN produced (expTG): k=%d t=%d s=%d jl=%d g=%d gp=%d: %f\n",k,t,s,jl,g,gp,expR[k][j]);
-										exit(1);
+										warning=1;
 									}
 									else if(isinf(expTG[k][t][s][jl][g][gp])){
 										fprintf(stderr,"Inf produced (expTG): k=%d t=%d s=%d jl=%d g=%d gp=%d: %f\n",k,t,s,jl,g,gp,expR[k][j]);
@@ -1394,7 +1395,7 @@ int main(int argc, char *argv[]) {
 									temp[s]*=(long double)current_contig.snps[t].genotypes_by_sex[g+3*s];
 									if(isnan(temp[s])){
 										fprintf(stderr,"NaN produced (M-step, new value for e): contig %d, site %d, sex %d: %Le\n",k,current_contig.snps[t].position,s,temp[s]);
-										exit(1);
+										warning=1;
 									}
 								}
 								U[g][gp]+=temp[0]+temp[1];
@@ -1479,7 +1480,7 @@ int main(int argc, char *argv[]) {
 		fprintf(stdout,", log-likelihood: %Lf\n",loglik);
 		if(oldloglik > loglik){
 			fprintf(stderr,"Warning: log-likelihood decreases by %Lf; interrupting maximization and proceeding to output\n",oldloglik-loglik);
-			break;
+			warning=1;
 		}
 
 //		if(mode == SITE){
@@ -1490,6 +1491,10 @@ int main(int argc, char *argv[]) {
 //		}
 	}
 	//End of EM algorithm. Outputting
+	
+	if(warning){
+		fprintf(outfile,"Warning: an error occurred, probably due to numerical problems (see stderr for details). The following output should not be used for other purposes than finding the error.\n");
+	}
 	
 	if((geom_score=(double *)malloc(sizeof(double)*JTYPES))==NULL) {
 		fprintf(stderr,"error in memory allocation\n");
