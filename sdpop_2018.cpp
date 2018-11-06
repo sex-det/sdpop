@@ -1516,7 +1516,7 @@ int main(int argc, char *argv[]) {
 	foreach_l_zw(model,lfunc);
 	fprintf(outfile,"; e0: %e",e);
 	fprintf(outfile,", log-likelihood: %Lf",loglik);
-	npar=model.haploid+model.paralogs+(model.xy || model.zw)*3;
+	npar=model.haploid+model.paralogs+model.xy*3+model.zw*3;
 	if(errormodel==ERRORS){
 		npar+=1;
 	}
