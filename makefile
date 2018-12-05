@@ -22,6 +22,8 @@ eer: eer.c
 	$(CC) -Wall -o eer eer.c
 heterozygosity: heterozygosity.c
 	$(CC) -Wall -o heterozygosity -lm heterozygosity.c
+postrecalc: postrecalc.c
+	$(CC) -Wall -o postrecalc -lm postrecalc.c
 vcf2gen: vcf2gen.c
 	$(CC) -Wall -o vcf2gen vcf2gen.c
 
