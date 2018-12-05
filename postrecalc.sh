@@ -67,3 +67,26 @@ then
 #	echo -e "\tafter: $L1"
 fi
 done < $1
+
+	if [[ $i -gt 0 ]]
+	then
+		echo -n "$contigname " 	
+	sumL=0
+	for j in 0 1 2 3 4 5 6 7
+
+	do
+	if [[ ${f[$j]} ]]
+	then
+		sumL=`echo ${L[$j]} | awk -v s="$sumL" '{ result = $1 + s ; print result}'`
+	fi
+	echo -n "${L[$j]} "
+	done
+	echo -n "$sumL "
+	for j in 0 1 2 3 4 5 6 7
+
+	do
+		echo ${L[$j]} | awk -v s="$sumL" '{ result = $1 / s ; printf "%f ", result }'
+	done
+	echo
+	fi
+
