@@ -8,8 +8,8 @@ int main(int argc, char *argv[]) {
 	int namelen=1000;
 	char tcont[namelen],word[namelen];
 	char line[100000],tmpline[100000];
-	int c,l,j,i,f[7],nwords,length;
-	double L[7],sumL;
+	int c,l,j,i,f[7],nwords,length,nsites,n;
+	double L[7],logL[7],sumL,sumlogL,m;
 	FILE *fp;
 
 	if((fp=fopen(argv[1],"r"))==NULL){
@@ -69,40 +69,59 @@ int main(int argc, char *argv[]) {
 					}
 					nwords++;
 				}
-//					for(j=0;j<7;j++){
-//						printf("%d\t",f[j]);
-//					}
-//					printf("\n");
-
+				printf("contig_name\tN_sites\tmean_coverage");
+				printf("\tmean_autosomal");
+				printf(" geom_autosomal");
+				printf("\tmean_haploid");
+				printf(" geom_haploid");
+				printf("\tmean_paralog");
+				printf(" geom_paralog");
+				printf("\tmean_xhemizygote");
+				printf(" geom_xhemizygote");
+				printf("\tmean_xy");
+				printf(" geom_xy");
+				printf("\tmean_zhemizygote");
+				printf(" geom_zhemizygote");
+				printf("\tmean_zw");
+				printf(" geom_zw");
+				printf("\n");
+				
 			}
 		}
 		else if ( line[0] == '>' ){
 			if (i > 0){
-				printf("%s",tcont);
+				printf("%s\t%d\t%f",tcont,n,m);
 				sumL=0.;
+				sumlogL=0.;
 				for(j=0;j<7;j++){
 					if(f[j]>-1){
+						logL[j]=exp(logL[j]/nsites);
+						sumlogL+=logL[j];
 						sumL+=L[j];
 					}
 				}
 				for(j=0;j<7;j++){
-					printf("\t%e",L[j]/sumL);
+					printf("\t%e %e",L[j]/sumL,logL[j]/sumlogL);
 				}
 				printf("\n");
 			}
-			sscanf(line,">%s\t%*[^\n]",tcont);
+			sscanf(line,">%s\t%d\t%lf%*[^\n]",tcont,&n,&m);
 			i++;
 			for(j=0;j<7;j++){
 				L[j]=0;
+				logL[j]=0;
+				nsites=0;
 			}
 		}
 		else if (line[0] != '#' && i > 0){
+			nsites++;
 			nwords=0;
 			j=0;
 			while ( sscanf(line,"%[^\t ]%*[\t ]%[^\n]",word,tmpline)==2)	{
 				strcpy(line,tmpline);
 				if(nwords==f[j]){
 					L[j]+=exp(atof(word));
+					logL[j]+=atof(word);
 					j++;
 					while (f[j]<0){
 						j++;
@@ -113,15 +132,18 @@ int main(int argc, char *argv[]) {
 		}
 	}
 	if (i > 0){
-		printf("%s",tcont);
+		printf("%s\t%d\t%f",tcont,n,m);
 		sumL=0.;
+		sumlogL=0.;
 		for(j=0;j<7;j++){
 			if(f[j]>-1){
+				logL[j]=exp(logL[j]/nsites);
+				sumlogL+=logL[j];
 				sumL+=L[j];
 			}
 		}
 		for(j=0;j<7;j++){
-			printf("\t%e",L[j]/sumL);
+			printf("\t%e %e",L[j]/sumL,logL[j]/sumlogL);
 		}
 		printf("\n");
 	}

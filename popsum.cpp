@@ -238,12 +238,6 @@ void write_contig(FILE *outfile, Contig contig, int n3, int n4, double theta)
 	fprintf(outfile,">%s\t%d\t%d\t%d\t%f\n",contig.name.data(),npolysites,n3,n4,theta);
 	if(npolysites>0) {
 		for (t=0; t<npolysites; t++){
-			//			if (datafmt==GBS_FILTERED){
-			//				fprintf(outfile,"%s\t",sitename[polysite[t][0]-1]);
-			//				for (i=1; i<7; i++) {
-			//					fprintf(outfile,"%d\t",polysite[t][i]);
-			//				}
-			//			}
 			fprintf(outfile,"%d\t",contig.snps[t].position);
 			fprintf(outfile,"%c%c\t",int2DNA(contig.snps[t].alleles[0]),int2DNA(contig.snps[t].alleles[1]));
 			for (i=0; i<6; i++) {
@@ -361,14 +355,6 @@ int main(int argc, char *argv[])
 			if ( strncmp(line.data(),">",1)==0){
 				if (firstcontig==0) {	//Filtering polymorphisms for the last read contig
 					nJ=pos;
-//					if(randomise){ //Fisher-Yates shuffling
-//						for (i=0;i<nfound-1;i++) {
-//							ri=i+rand()/(RAND_MAX/(nfound-i)+1);
-//							tempsex=foundsex[i];
-//							foundsex[i]=foundsex[ri];
-//							foundsex[ri]=tempsex;
-//						}
-//					}
 					Contig contig=polyfilter(contiggenotypes,&n3,&n4,&theta);
 					contiggenotypes.individuals.clear();
 					contiggenotypes.genotypes.clear();
@@ -409,7 +395,18 @@ int main(int argc, char *argv[])
 				}
 				
 				nfound=findsex(name, ni, femname, nfem, malname, nmal, sex, foundsex, ffound, &nf, mfound, &nm);
-
+				
+				if(randomise){ //Fisher-Yates shuffling
+					for (i=0;i<ni-1;i++) {
+						if(sex[i]>=0){
+							while(sex[ri=i+rand()/(RAND_MAX/(ni-i)+1)]<0){
+							}
+							tempsex=sex[i];
+							sex[i]=sex[ri];
+							sex[ri]=tempsex;
+						}
+					}
+				}
 				for(i=0;i<ni;i++){
 					if ( sex[i]>=0 ) {
 						Individual tmpindividual;
@@ -418,6 +415,7 @@ int main(int argc, char *argv[])
 						contiggenotypes.individuals.push_back(tmpindividual);
 					}
 				}
+				
 				
 				if(ni>nfem+nmal){
 					if(nplus==0) {
@@ -453,14 +451,6 @@ int main(int argc, char *argv[])
 			}
 		}
 		nJ=j;
-//		if(randomise){ //Fisher-Yates shuffling
-//			for (i=0;i<nfound-1;i++) {
-//				ri=i+rand()/(RAND_MAX/(nfound-i)+1);
-//				tempsex=foundsex[i];
-//				foundsex[i]=foundsex[ri];
-//				foundsex[ri]=tempsex;
-//			}
-//		}
 		Contig contig=polyfilter(contiggenotypes,&n3,&n4,&theta);
 		write_contig(outfile,contig,n3,n4,theta);
 		totsites+=contig.snps.size();
@@ -519,6 +509,17 @@ int main(int argc, char *argv[])
 					fprintf(stderr,"Nothing to do; exiting\n");
 					exit(0);
 				}
+					if(randomise){ //Fisher-Yates shuffling
+						for (i=0;i<ni-1;i++) {
+							if(sex[i]>=0){
+							while(sex[ri=i+rand()/(RAND_MAX/(ni-i)+1)]<0){
+							}
+							tempsex=sex[i];
+							sex[i]=sex[ri];
+							sex[ri]=tempsex;
+							}
+						}
+					}
 				for(i=0;i<ni;i++){
 					if ( sex[i]>=0 ) {
 						Individual tmpindividual;
@@ -564,6 +565,17 @@ int main(int argc, char *argv[])
 					//here, we are sure it's a SNP. nnuc is the number of observed nucleotides
 					Genotypes tempgenotypes;
 					tempgenotypes.position=chrpos;
+					if(randomise){ //Fisher-Yates shuffling
+						for (i=0;i<ni-1;i++) {
+							if(sex[i]>=0){
+							while(sex[ri=i+rand()/(RAND_MAX/(ni-i)+1)]<0){
+							}
+							tempsex=sex[i];
+							sex[i]=sex[ri];
+							sex[ri]=tempsex;
+							}
+						}
+					}
 					tempgenotypes.individualgenotypes=vcfgenotypes(ni,sex,line.data(),nuc,maxnuc);
 					contiggenotypes.genotypes.push_back(tempgenotypes);
 					j++;				
@@ -574,7 +586,7 @@ int main(int argc, char *argv[])
 						fprintf(stdout,"Treating contig %s...\n",contiggenotypes.name.data());
 						nJ=j;
 						if(nJ>0){
-							Contig contig=polyfilter(contiggenotypes,&n3,&n4,&theta);
+						Contig contig=polyfilter(contiggenotypes,&n3,&n4,&theta);
 							contiggenotypes.genotypes.clear();
 							write_contig(outfile,contig,n3,n4,theta);
 							totsites+=contig.snps.size();

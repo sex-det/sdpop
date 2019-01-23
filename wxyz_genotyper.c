@@ -2,10 +2,72 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
-#include "reading.h"
 
 //1) read sdpop output and select genes considered as sex-linked
 //2) read genotype file 
+int DNA2int(char c) 
+{
+	switch (c) {
+	case 'a' :
+	case 'A' :
+		return 1;
+		break;
+	case 'c' :
+	case 'C' :
+		return 2;
+		break;
+	case 'g' :
+	case 'G' :
+		return 3;
+		break;
+	case 't' :
+	case 'T' :
+		return 4;
+		break;
+	case '.' :
+	case 'n' :
+	case 'N' :
+		return 0;
+		break;
+	default:
+		fprintf(stderr,"DNA2int: error reading base. Allowed characters are a,t,g,c,A,T,G,C,.,n and N\n");
+		exit(1);
+		break;
+	}
+}
+
+char int2DNA(int i) 
+{
+	switch (i) {
+	case 1 :
+		return 'A';
+		break;
+	case 2 :
+		return 'C';
+		break;
+	case 3 :
+		return 'G';
+		break;
+	case 4 :
+		return 'T';
+		break;
+	default:
+		return 'N';
+		break;
+	}
+}
+
+void outfunction(FILE *outfile, char *contig, int s,int t,int fixed,int ns,double pi_X,double pi_Y,double divergence,char *sequenceX,char *sequenceY){
+	fprintf(outfile,">%s_X %d %d %d %f %f\n",contig,t,fixed,ns,pi_X/ns,divergence/ns);
+	sequenceX[s]='\0';
+	sequenceY[s]='\0';
+	fprintf(outfile,"%s\n",sequenceX);
+	fprintf(outfile,">%s_Y %d %d %d %f %f\n",contig,t,fixed,ns,pi_Y/ns,divergence/ns);
+	fprintf(outfile,"%s\n",sequenceY);
+	
+	free(sequenceX);
+	free(sequenceY);
+}
 
 int main(int argc, char *argv[]) 
 {
@@ -16,12 +78,12 @@ int main(int argc, char *argv[])
 	int ncontigs_allocated;
 	char *line = calloc((size_t)CUR_MAX,sizeof(char));
 	char *tmpline = calloc((size_t)CUR_MAX,sizeof(char));
-	char *contig,***nuc,ch='a',gencontig[NAME_LEN];
+	char *contig,***nuc,ch='a',gencontig[NAME_LEN],word[NAME_LEN];
 	int *npolysites,toread=0,ncontigs,ngencontigs,sites_allocated,***polysite;
 	double *contigpp,contigthreshold,sitethreshold1,sitethreshold2,***f;
 	char *sequenceX,*sequenceY,nuc1,nuc2;
 	int i,j,k,l,s,t,found,pos,nacgt[5],div,nextpos,x;
-	int count,length,SNP,fixed,ns;
+	int count,length,SNP,fixed,ns,ff[2],XY,nwords,posterior_field,mean;
 	double pi_X,pi_Y,divergence;
 
 	for(i=0;i<argc;i++) {
@@ -29,8 +91,8 @@ int main(int argc, char *argv[])
 	}
 	fprintf(stdout,"\n");
 	
-	if (argc != 7) {
-		fprintf(stdout,"Usage: %s sdpopfile genfile outfile contigthreshold sitethreshold1 sitethreshold2\n",argv[0]);
+	if (argc != 10) {
+		fprintf(stdout,"Usage: %s sdpopfile genfile outfile contigthreshold sitethreshold1 sitethreshold2 posterior_field system max/mean\n",argv[0]);
 		exit(1);
 	}
 	
@@ -61,7 +123,28 @@ int main(int argc, char *argv[])
 		fprintf(stderr,"Error: sitethreshold2 should be between 0.5 and sitethreshold1; value given: %s\n",argv[6]);
 		exit(1);
 	}
-	
+	if(strcmp(argv[8],"XY")==0){
+		XY=1;
+	}
+	else if(strcmp(argv[8],"ZW")==0){
+		XY=0;
+	}
+	else {
+		fprintf(stderr,"Error: system should be either \"XY\" or \"ZW\" ; value given: \"%s\"\n",argv[8]);
+		exit(1);
+	}
+	if(strcmp(argv[9],"mean")==0){
+		mean=1;
+	}
+	else if(strcmp(argv[9],"max")==0){
+		mean=0;
+	}
+	else {
+		fprintf(stderr,"Error: choose either \"max\" or \"mean\" ; value given: \"%s\"\n",argv[9]);
+		exit(1);
+	}
+		
+		
 	k=-1;
 	if((contig=(char *)malloc(sizeof(char)*NCONTIG_BATCH*NAME_LEN))==NULL) { 
 		fprintf(stderr,"error in memory allocation\n");
@@ -116,6 +199,84 @@ int main(int argc, char *argv[])
 //		}
 		//We've read one line :
 		l++;
+		
+		//parsing header
+		if ( line[0] == '#' ){
+			if ( line[1] == '>' ){
+//				printf("%s",line);
+				//finding contig posteriors
+				nwords=0;
+				posterior_field=-1;
+				while ( sscanf(line,"%[^\t ]%*[\t ]%[^\n]",word,tmpline)==2)	{
+					if(strcmp(word,argv[7])==0){
+						posterior_field=nwords;
+						break;
+					}
+					nwords++;
+					strcpy(line,tmpline);
+				}
+//				printf("%d\n",posterior_field);
+				if(posterior_field<0){
+					printf("Error: word \"%s\" not found in line %d\n",argv[7],l);
+					exit(1);
+				}
+			}
+		}
+		if ( line[0] == '#' ){
+			if ( line[1] == 'p' ){
+//				printf("%s",line);
+				//finding allele frequency fields
+				//X and Y (or Z and W) frequencies are separated by a space (not a tab)
+				for(i=0;i<2;i++){
+					ff[i]=-1;
+				}
+				nwords=0;
+				while ( sscanf(line,"%[^\t ]%*[\t ]%[^\n]",word,tmpline)==2)	{
+//					printf("%d \"%s\"\t",nwords,word);
+					strcpy(line,tmpline);
+					if(XY){
+						if (mean==0){
+							if(strcmp(word,"fx_max")==0) {
+								ff[0]=nwords;
+							}
+							if(strcmp(word,"fy_max")==0) {
+								ff[1]=nwords;
+							}
+						}
+						else {
+							if(strcmp(word,"fx_mean")==0) {
+								ff[0]=nwords;
+							}
+							if(strcmp(word,"fy_mean")==0) {
+								ff[1]=nwords;
+							}
+						}
+					}
+					else {
+						if (mean==0){
+							if(strcmp(word,"fz_max")==0) {
+								ff[0]=nwords;
+							}
+							if(strcmp(word,"fw_max")==0) {
+								ff[1]=nwords;
+							}
+						}
+						else {
+							if(strcmp(word,"fz_mean")==0) {
+								ff[0]=nwords;
+							}
+							if(strcmp(word,"fw_mean")==0) {
+								ff[1]=nwords;
+							}
+						}
+					}
+					nwords++;
+				}			
+
+				fprintf(outfile,"#contig_name N_poly_sites N_fixed_diff N_total pi divergence\n");
+			}
+		}
+		
 		if ( line[0] == '>') {
 			k++;
 			//Start preparing to read a new contig
@@ -150,9 +311,24 @@ int main(int argc, char *argv[])
 				fprintf(stderr,"Error: a line name is too long (more than %d characters), line %d.\n",NAME_LEN-1,l);
 				exit(1);
 			}
-			sscanf(line,">%s\t%d\t%*f\t%*d\t%*f\t%*f\t%*d\t%*f\t%*f\t%*d\t%*f\t%*f\t%*d\t%*f\t%*f\t%*d\t%*f\t%lf\t%*d\n",
-				&contig[k*NAME_LEN],&npolysites[k],&contigpp[k]);
+//			printf("%s",line);
+			sscanf(line,">%s\t%d\t%[^\n]",&contig[k*NAME_LEN],&npolysites[k],tmpline);
+//			sscanf(line,">%s\t%d\t%*f\t%*d\t%*f\t%*f\t%*d\t%*f\t%*f\t%*d\t%*f\t%*f\t%*d\t%*f\t%*f\t%*d\t%*f\t%lf\t%*d\n",
+//				&contig[k*NAME_LEN],&npolysites[k],&contigpp[k]);
+			nwords=2;
+			strcpy(line,tmpline);
+			while ( sscanf(line,"%[^\t ]%*[\t ]%[^\n]",word,tmpline)==2)	{
+				strcpy(line,tmpline);
+				if(nwords==posterior_field){
+					contigpp[k]=atof(word);
+//					printf("%d %s %f\n",nwords,word,contigpp[k]);
+					break;
+				}
+				nwords++;
+			}	
+
 			if(contigpp[k]>=contigthreshold){
+//				printf("%f\n",contigpp[k]);
 				toread=1;
 				if((polysite[k]=(int **)malloc(sizeof(int *)*npolysites[k]))==NULL) {
 					fprintf(stderr,"error in memory allocation\n");
@@ -194,8 +370,23 @@ int main(int argc, char *argv[])
 				fprintf(stderr,"Error: contig %s does seem to have more polymorphic sites than announced\n",&contig[k*NAME_LEN]);
 				exit(1);				
 			}
-			sscanf(line,"%d\t%c%c\t%d\t%d\t%d\t%d\t%d\t%d\t%lf %lf",
-				&polysite[k][t][0],&nuc[k][t][0],&nuc[k][t][1],&polysite[k][t][1],&polysite[k][t][2],&polysite[k][t][3],&polysite[k][t][4],&polysite[k][t][5],&polysite[k][t][6],&f[k][t][0],&f[k][t][1]);
+//			printf("%s",line);
+			sscanf(line,"%d\t%c%c\t%d\t%d\t%d\t%d\t%d\t%d\t%[^\n]",
+				&polysite[k][t][0],&nuc[k][t][0],&nuc[k][t][1],&polysite[k][t][1],&polysite[k][t][2],&polysite[k][t][3],&polysite[k][t][4],&polysite[k][t][5],&polysite[k][t][6],tmpline);
+			strcpy(line,tmpline);
+			nwords=8;
+			j=0;
+			while ( sscanf(line,"%[^\t ]%*[\t ]%[^\n]",word,tmpline)==2)	{
+				strcpy(line,tmpline);
+				if(nwords==ff[j]){
+					f[k][t][j]=atof(word);
+					j++;
+					if(j>1){
+						break;
+					}
+				}
+				nwords++;
+			}
 			t++;
 		}
 	}
@@ -234,15 +425,7 @@ int main(int argc, char *argv[])
 		l++;
 		if ( line[0] == '>'){
 			if(found>=0){ // print last sequences
-				fprintf(outfile,">%s_X %d %d %d %f %f\n",&contig[k*NAME_LEN],t,fixed,ns,pi_X/ns,divergence/ns);
-				sequenceX[s]='\0';
-				sequenceY[s]='\0';
-				fprintf(outfile,"%s\n",sequenceX);
-				fprintf(outfile,">%s_Y %d %d %d %f %f\n",&contig[k*NAME_LEN],t,fixed,ns,pi_Y/ns,divergence/ns);
-				fprintf(outfile,"%s\n",sequenceY);
-				
-				free(sequenceX);
-				free(sequenceY);
+				outfunction(outfile,&contig[k*NAME_LEN],s,t,fixed,ns,pi_X,pi_Y,divergence,sequenceX,sequenceY);
 			}
 			sscanf(line,">%s",gencontig);
 			found=-1;
@@ -336,7 +519,8 @@ int main(int argc, char *argv[])
 				pi_X+=2*f[k][t][0]*(1.-f[k][t][0]);
 				pi_Y+=2*f[k][t][1]*(1.-f[k][t][1]);
 				divergence+=f[k][t][0]*(1.-f[k][t][1])+f[k][t][1]*(1.-f[k][t][0]);
-				if( (f[k][t][0]>=sitethreshold1 || f[k][t][0]<=1-sitethreshold1) && (f[k][t][1]>=sitethreshold1 || f[k][t][1]<=1-sitethreshold1) ){
+//				if( (f[k][t][0]>=sitethreshold1 || f[k][t][0]<=1-sitethreshold1) && (f[k][t][1]>=sitethreshold1 || f[k][t][1]<=1-sitethreshold1) ){
+				if( (f[k][t][0]>=sitethreshold1 && f[k][t][1]<=1-sitethreshold1) || (f[k][t][1]>=sitethreshold1 && f[k][t][0]<=1-sitethreshold1) ){
 					fixed++;
 				}
 				t++;
@@ -387,6 +571,10 @@ int main(int argc, char *argv[])
 			s++;
 		}
 	}
+	if(found>=0){ // print last sequences
+		outfunction(outfile,&contig[k*NAME_LEN],s,t,fixed,ns,pi_X,pi_Y,divergence,sequenceX,sequenceY);
+	}
+
 	
 	fclose(genfile);
 	if(ngencontigs!=ncontigs){

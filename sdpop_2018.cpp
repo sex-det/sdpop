@@ -718,7 +718,7 @@ int main(int argc, char *argv[]) {
 	int npolysites;
 	int ncontigs,totsites;
 	double sumET,weights;     
-	double pi[JTYPES],**rho,oldpi[JTYPES],**oldrho,sumpi,sumrho;
+	double dumpi[JTYPES],pi[JTYPES],**rho,oldpi[JTYPES],**oldrho,sumpi,sumrho;
 	long double pidelta[JTYPES],**rhodelta,deltamax;
 	int mode=CONTIG,errormodel=ERRORS,plateausteps,nnoncontigs;
 	double stop=0.0001; //relative difference between parameter values used to signal convergence
@@ -726,12 +726,12 @@ int main(int argc, char *argv[]) {
 	double Q[3][3],e;
 	double maxl,sumgp;
 	long double temp[JTYPES],templ[LTYPES],maxgp,sumL;
-	double pmax,gmax,fx,fy;
-	int	jmax,lmax,gpmax;
+	double pmax,gmax,rmax,fx,fy;
+	int	jmax,lmax,nmax,gpmax;
 	long double oldloglik,loglik;
 	double U[3][3],Usim,Udis;
-	int ni,npi=1,sites_individuals,npar;
-	double *geom_score;
+	int nj,ni,npi=1,sites_individuals,npar;
+	double *geom_score,*geom_nopi_score;
 	int warning=0;
 
 	std::vector<Contig> contigs;
@@ -1500,6 +1500,10 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr,"error in memory allocation\n");
 		exit(1);
 	}
+	if((geom_nopi_score=(double *)malloc(sizeof(double)*JTYPES))==NULL) {
+		fprintf(stderr,"error in memory allocation\n");
+		exit(1);
+	}
 	
 	fprintf(outfile,"pi");
 	foreach_j(model,[&](const auto j){
@@ -1538,28 +1542,28 @@ int main(int argc, char *argv[]) {
 	fprintf(outfile,"#>contig_name\tN_sites\tmean_coverage");
 	foreach_j(model,[&](const auto j){
 			if(j==J_AUTO){
-				fprintf(outfile,"\tj_autosomal posterior_autosomal geometric_autosomal");
+				fprintf(outfile,"\tj_autosomal posterior_autosomal geometric_autosomal noprior_autosomal");
 			}
 			if(j==J_HAPLOID){
-				fprintf(outfile,"\tj_haploid posterior_haploid geometric_haploid");
+				fprintf(outfile,"\tj_haploid posterior_haploid geometric_haploid noprior_haploid");
 			}
 			if(j==J_PARA){
-				fprintf(outfile,"\tj_paralog posterior_paralog geometric_paralog");
+				fprintf(outfile,"\tj_paralog posterior_paralog geometric_paralog noprior_paralog");
 			}
 			if(j==J_HEMI){
-				fprintf(outfile,"\tj_xhemizygote posterior_xhemizygote geometric_xhemizygote");
+				fprintf(outfile,"\tj_xhemizygote posterior_xhemizygote geometric_xhemizygote noprior_xhemizygote");
 			}
 			if(j==J_ZHEMI){
-				fprintf(outfile,"\tj_zhemizygote posterior_zhemizygote geometric_zhemizygote");
+				fprintf(outfile,"\tj_zhemizygote posterior_zhemizygote geometric_zhemizygote noprior_zhemizygote");
 			}
 			if(j==J_SEX){
-				fprintf(outfile,"\tj_xy posterior_xy geometric_xy");
+				fprintf(outfile,"\tj_xy posterior_xy geometric_xy noprior_xy");
 			}
 			if(j==J_ZW){
-				fprintf(outfile,"\tj_zw posterior_zw geometric_zw");
+				fprintf(outfile,"\tj_zw posterior_zw geometric_zw noprior_zw");
 			}
 	});
-	fprintf(outfile,"\tmax_posterior max_geometric\n");
+	fprintf(outfile,"\tmax_posterior max_geometric max_noprior\n");
 	fprintf(outfile,"#position\talleles\tN11F\tN12F\tN22F\tN11M\tN12M\tN22M\t");
 	if(model.xy){
 		fprintf(outfile,"fx_max fy_max\t");
@@ -1658,6 +1662,20 @@ int main(int argc, char *argv[]) {
 					}
 				});
 				loghorner(JTYPES,jmax,temp,pi,geom_score);
+				//calculate geometric mean scores without priors
+				for(j=0;j<JTYPES;j++) {
+					dumpi[j]=0.;
+				}
+				nj=0;
+				foreach_j(model,[&](const auto j){
+					nj++;
+				});
+				foreach_j(model,[&](const auto j){
+					dumpi[j]=1./nj;
+				});
+				
+				loghorner(JTYPES,jmax,temp,dumpi,geom_nopi_score);
+				
 
 //			fprintf(outfile,">%s\t%d",&contig[k*NAME_LEN],npolysites[k]);
 			fprintf(outfile,">%s\t%d",contigs[k].name.data(),npolysites);
@@ -1670,9 +1688,15 @@ int main(int argc, char *argv[]) {
 			fprintf(outfile,"\t%f",(double)ni/(double)npolysites);
 				pmax=0.0;
 				gmax=0.0;
+				rmax=0.0;
 				jmax=-1;
 				lmax=-1;
+				nmax=-1;
 			for(j=0;j<JTYPES;j++) {
+				if(geom_nopi_score[j] > rmax){
+					rmax=geom_nopi_score[j];
+					nmax=j;
+				}				
 				if(geom_score[j] > gmax){
 					gmax=geom_score[j];
 					lmax=j;
@@ -1684,10 +1708,10 @@ int main(int argc, char *argv[]) {
 			}
 			foreach_j(model,[&](const auto j){
 			//for(j=0;j<JTYPES;j++) {
-				fprintf(outfile,"\t%d %e %e",j+1,expR[k][j],geom_score[j]);
+				fprintf(outfile,"\t%d %e %e %e",j+1,expR[k][j],geom_score[j],geom_nopi_score[j]);
 			});
 //			fprintf(outfile,"\t%f\n",zscore(k,npolysites[k],polysite[k],rho,Q,lmax,1000,P[k],condsegprob[k]));			
-			fprintf(outfile,"\t%d %d\n",jmax+1,lmax+1);
+			fprintf(outfile,"\t%d %d %d\n",jmax+1,lmax+1,nmax+1);
 			
 			for (t=0; t<npolysites; t++){
 				fprintf(outfile,"%d\t",current_contig.snps[t].position);
@@ -1807,6 +1831,7 @@ int main(int argc, char *argv[]) {
 
 	freeEM(contigs);
 	free(geom_score);
+	free(geom_nopi_score);
 
 	return 0;
 	

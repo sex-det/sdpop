@@ -32,8 +32,8 @@ reading.o: reading.cpp reading.h
 calc.o: calc.cpp calc.h
 	$(CXX) -Wall -c calc.cpp
 
-wxyz_genotyper: wxyz_genotyper.c reading.o
-	$(CC) -Wall -o wxyz_genotyper -lm reading.o wxyz_genotyper.c
+wxyz_genotyper: wxyz_genotyper.c
+	$(CC) -Wall -o wxyz_genotyper -lm wxyz_genotyper.c
 fisher: fisher.c reading.o calc.o
 	$(CC) -Wall -o fisher -lm reading.o calc.o fisher.c
 gen2fas: gen2fas.c reading.o
