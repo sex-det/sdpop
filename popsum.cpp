@@ -436,11 +436,11 @@ int main(int argc, char *argv[])
 			}
 			else { //line contains genotype data
 				sscanf(line.data(),"%d",&pos);
-				if(pos != j+1){
-					fprintf(stderr,"Error in input file line number %d: expecting to read \"%d ...\"\n",l,j+1);
-					fprintf(stderr,"read \"%s\" instead\n",line.data());
-					exit(1);
-				}
+//				if(pos != j+1){
+//					fprintf(stderr,"Error in input file line number %d: expecting to read \"%d ...\"\n",l,j+1);
+//					fprintf(stderr,"read \"%s\" instead\n",line.data());
+//					exit(1);
+//				}
 				Genotypes tempgenotypes;
 				tempgenotypes.position=pos;
 				tempgenotypes.individualgenotypes=gengenotypes(ni,sex,line.data());

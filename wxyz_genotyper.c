@@ -467,11 +467,11 @@ int main(int argc, char *argv[])
 			}
 			sscanf(line,"%d%[^\n]",&pos,tmpline);
 			strcpy(line,tmpline);
-			if(pos!=s+1){
-				fprintf(stderr,"Error in input file line number %d: expecting to read \"%d ...\"\n",l,s+1);
-				fprintf(stderr,"read \"%s\" instead\n",line);
-				exit(1);
-			}
+//			if(pos!=s+1){
+//				fprintf(stderr,"Error in input file line number %d: expecting to read \"%d ...\"\n",l,s+1);
+//				fprintf(stderr,"read \"%s\" instead\n",line);
+//				exit(1);
+//			}
 			if(t<npolysites[k]) {
 				if(pos==polysite[k][t][0]) { //a SNP, and we know the genotype
 					SNP=1;

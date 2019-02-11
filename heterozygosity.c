@@ -62,9 +62,11 @@ int **zygosity(int npos, int nind, char *genotypes, int *nsites, int *n2, int *n
 	
 	n=0;
 	for (j=0; j<npos; j++){
+//		printf("%d\t",j);
 		//count the number of alleles : A, T, G, C, N
 		nA=nT=nG=nC=nN=0;
 		for (i=0; i<2*nind; i++){ //loop through all chromosomes
+//			printf("%c",genotypes[j*nind*2+i]);
 			switch (genotypes[j*nind*2+i]) {
 			case 'A' :
 				nA++;
@@ -83,10 +85,12 @@ int **zygosity(int npos, int nind, char *genotypes, int *nsites, int *n2, int *n
 				nN++;
 				break;
 			default :
-				fprintf(stderr,"Error in parsing genotypes at position %d: allowed are only A, T, G, C, and N (or n).\n",j+1);
+				fprintf(stderr,"Error in parsing genotypes at position %d, chromosome %d: allowed are only A, T, G, C, and N (or n).\n",j+1,i+1);
+				fprintf(stderr,"read %c instead\n",genotypes[j*nind*2+i]);
 				exit(1);
 			}
 		}
+//		printf("\n");
 		div=0;
 		if (nA>0) {
 			div++;
@@ -284,10 +288,12 @@ int main(int argc, char *argv[])
 		}
 		//We've read one line :
 		l++;
+//		printf("%s",line);
 		
 		if ( line[0] == '>' ){
 			if (firstcontig==0) {	//Filtering polymorphisms for the last read contig
-				nJ=pos;
+//				nJ=pos;
+				nJ=j;
 				zyg[k]=zygosity(nJ,nnames,genotypes,&nsites[k],&n2[k],&n3[k],&n4[k],&theta[k]);
 				free(genotypes);
 				totsites+=nsites[k];
@@ -447,11 +453,11 @@ int main(int argc, char *argv[])
 		else { //line contains genotype data
 				sscanf(line,"%d%[^\n]",&pos,tmpline);
 				strcpy(line,tmpline);
-				if(pos != j+1){
-					fprintf(stderr,"Error in input file line number %d: expecting to read \"%d ...\"\n",l,j+1);
-					fprintf(stderr,"read \"%s\" instead\n",line);
-					exit(1);
-				}
+//				if(pos != j+1){
+//					fprintf(stderr,"Error in input file line number %d: expecting to read \"%d ...\"\n",l,j+1);
+//					fprintf(stderr,"read \"%s\" instead\n",line);
+//					exit(1);
+//				}
 				if (j==0) {
 					if((genotypes=(char *)malloc(sizeof(char)*(nnames)*2))==NULL){
 						fprintf(stderr,"error in memory allocation\n");
@@ -490,7 +496,8 @@ int main(int argc, char *argv[])
 	//	fprintf(stdout,"%d sites (individuals * positions), error rate (reads2snp) = %f\n",gensite,1.-totgenprob/gensite);
 	
 	//Filtering polymorphisms for the last contig	
-	nJ=pos;
+//	nJ=pos;
+	nJ=j;
 	zyg[k]=zygosity(nJ,nnames,genotypes,&nsites[k],&n2[k],&n3[k],&n4[k],&theta[k]);
 	free(genotypes);
 	totsites+=nsites[k];

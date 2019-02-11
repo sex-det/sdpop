@@ -152,7 +152,7 @@ int main(int argc, char *argv[])
 	char genotypes[2];
 	int val,nnuc,maxnuc=5; //A, T, G, C, or N
 	char nuc[maxnuc];
-	char chrom[NAME_LEN],chrpos[NAME_LEN],vcfformatstring[NAME_LEN],genotypestring[NAME_LEN],contigpos[NAME_LEN];
+	char chrom[NAME_LEN],chrpos[NAME_LEN],oldchrpos[NAME_LEN],vcfformatstring[NAME_LEN],genotypestring[NAME_LEN],contigpos[NAME_LEN];
 	int all=0,maxsize=0;
 
 	for(i=0;i<argc;i++) {
@@ -338,6 +338,11 @@ int main(int argc, char *argv[])
 					sprintf(contigpos,"%s_%s",contig,chrpos);
 					writegenheader(outfile,contigpos,name,conserve,ni,nnames);
 				}
+				else if(maxsize < 0 && atoi(chrpos) > atoi(oldchrpos)+1){
+					j=0;
+					sprintf(contigpos,"%s_%s",contig,chrpos);
+					writegenheader(outfile,contigpos,name,conserve,ni,nnames);
+				}
 				
 				fprintf(outfile,"%s\t",chrpos);
 				//strip fields we don't use 
@@ -463,6 +468,7 @@ int main(int argc, char *argv[])
 				}
 				j++;
 			}
+			strcpy(oldchrpos,chrpos);
 		}
 	}
 
