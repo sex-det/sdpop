@@ -4,11 +4,12 @@
 
 int npoly=0;
 int e0t=0,e1t=0,e2t=0;
+int genformat=0;
 
 void countgenotypes(FILE *fp,int **sequence, int npos, int nind, int contiglength, double e[3]) {
 	int n11m,n12m,n22m,n11f,n12f,n22f;
-	int t,i,genformat=0,nxdiff,nydiff,nucfix,nfix;
-	double a;
+	int t,i,nxdiff,nydiff,nucfix,nfix,ny0,nx0;
+	double a,fa,fx,fy,pi_a=0,pi_x=0,pi_y=0,D_xy=0,pif_a=0,pif_x=0,pif_y=0,Df_xy=0;
 	int e0,e1,e2;
 	
 	//	Watterson's theta: autosomes
@@ -16,54 +17,65 @@ void countgenotypes(FILE *fp,int **sequence, int npos, int nind, int contiglengt
 	for(i=1;i<4*nind;i++){
 		a+=1./(double)i;
 	}
-	fprintf(fp,"Watterson's theta (without errors; A,X,Y) = %f ",((double)npos/(double)contiglength)/a);
+	fprintf(fp,"th_WA = %f ",((double)npos/(double)contiglength)/a);
 	//	Watterson's theta: count X and Y polymorphisms and differences
 	nydiff=0;	
 	nxdiff=0;
 	nfix=0;
 	for(t=0;t<npos;t++){
-		nucfix=-1;	
+		ny0=0;
+		nx0=0;
 		//Y
-		for(i=1;i<nind;i++){
-			if(sequence[0][t]!=sequence[i][t] ){ 
-				nydiff++;
-				break;
+		for(i=0;i<nind;i++){
+			if(sequence[i][t]==0){
+				ny0++;
 			}
 		}
-		if(i==nind){ //fixed position
-			nucfix=sequence[0][t];
+		if(ny0 > 0 && ny0 < nind){
+			nydiff++;
 		}
 		 //X
-		for(i=nind+1;i<4*nind;i++){
-			if(sequence[nind][t]!=sequence[i][t]){
-				nxdiff++;
-				break;
+		for(i=nind;i<4*nind;i++){
+			if(sequence[i][t]==0){
+				nx0++;
 			}
 		}
-		if(i==4*nind){ //fixed position
-			if(nucfix+sequence[nind][t]==1){ //fixed differently on X and Y
-				nfix++;
-			}
+		if(nx0 > 0 && nx0 < 3*nind){
+			nxdiff++;
 		}
+		if( (nx0==0 && ny0==nind) || (ny0==0 && nx0==3*nind) ){
+			nfix++;
+		}
+		pi_a+=(double)((nx0+ny0)*(3*nind-nx0+nind-ny0))/(0.5*(4*nind)*(4*nind-1));
+		pi_y+=(double)((ny0)*(nind-ny0))/(0.5*(nind)*(nind-1));
+		pi_x+=(double)((nx0)*(3*nind-nx0))/(0.5*(3*nind)*(3*nind-1));
+		D_xy+=(double)(nx0*(nind-ny0)+ny0*(3*nind-nx0))/(double)(nind*3*nind);
+
+		fx=(double)nx0/(3.*nind);
+		fy=(double)ny0/(1.*nind);
+		fa=(double)(nx0+ny0)/(4.*nind);
+		pif_a+=2.*fa*(1-fa);
+		pif_y+=2.*fy*(1-fy);
+		pif_x+=2.*fx*(1-fx);
+		Df_xy+=fx*(1-fy)+fy*(1-fx);
 	}
  	// output Watterson's theta for X
 	a=0;
 	for(i=1;i<3*nind;i++){
 		a+=1./(double)i;
 	}
-	fprintf(fp,"%f ",((double)nxdiff/(double)contiglength)/a);
+	fprintf(fp,"th_WX = %f ",((double)nxdiff/(double)contiglength)/a);
  	// output Watterson's theta for Y
 	a=0;
 	for(i=1;i<nind;i++){
 		a+=1./(double)i;
 	}
-	fprintf(fp,"%f\t",((double)nydiff/(double)contiglength)/a);
+	fprintf(fp,"th_WY = %f\t",((double)nydiff/(double)contiglength)/a);
  	// output fixed differences 
- 	fprintf(fp,"Divergence = %f\n",(double)nfix/(double)contiglength);
- 	
+ 	fprintf(fp,"fixed = %f\t",(double)nfix/(double)contiglength);
+ 	fprintf(fp,"pi_a = %f pi_x = %f pi_y = %f D_xy = %f\t",pi_a/contiglength,pi_x/contiglength,pi_y/contiglength,D_xy/contiglength);
+ 	fprintf(fp,"pif_a = %f pif_x = %f pif_y = %f Df_xy = %f\n",pif_a/contiglength,pif_x/contiglength,pif_y/contiglength,Df_xy/contiglength);
 	
-	
-
 	if(genformat){
 		fprintf(fp,"position");
         for(i=0;i<nind;i++){ //males
@@ -325,8 +337,8 @@ int main (int argc, char *argv[]) {
 		fprintf(stdout,"%s ",argv[i]);
 	}
 	fprintf(stdout,"\n");
-	if (argc != 7) {
-		fprintf(stdout,"Usage: %s infile outfile e0 e1 e2 x-hemi\n",argv[0]);
+	if (argc != 8) {
+		fprintf(stdout,"Usage: %s infile outfile e0 e1 e2 x-hemi genformat\n",argv[0]);
 		exit(1);
 	}
 
@@ -344,6 +356,7 @@ int main (int argc, char *argv[]) {
 	e[1]=atof(argv[4]);
 	e[2]=atof(argv[5]);
 	xhemifrac=atof(argv[6]);
+	genformat=atoi(argv[7]);
 	
 	if((sequence=(int **)malloc(sizeof(int *)*nind*2*2))==NULL) {
 		fprintf(stderr,"error in memory allocation\n");
@@ -365,7 +378,12 @@ int main (int argc, char *argv[]) {
 	while((nchar=getline(&line, (size_t *) &linelength, inputf))>0){
 		if(line[0] == '>' ){
 			if(!firstcontig && ii>0){ // treat last read contig		
-				fprintf(outputf,">%s\t",contigname);
+				if(k>ncontigs*(1.-xyfrac) && k<ncontigs*(1.-(1.-xhemifrac)*xyfrac)){ //x-hemizygotes
+					fprintf(outputf,">h%s\t",contigname);
+				}
+				else {
+					fprintf(outputf,">%s\t",contigname);
+				}
 				if(ii!=2*2*nind){
 					fprintf(stderr,"error: expected %d sequences, read %d\n",2*2*nind,ii);
 					exit(1);
@@ -403,7 +421,12 @@ int main (int argc, char *argv[]) {
 		}
 	}
 	if(ii>0){ // treat last read contig		
-		fprintf(outputf,">%s\t",contigname);
+		if(k>ncontigs*(1.-xyfrac) && k<ncontigs*(1.-(1.-xhemifrac)*xyfrac)){ //x-hemizygotes
+			fprintf(outputf,">h%s\t",contigname);
+		}
+		else {
+			fprintf(outputf,">%s\t",contigname);
+		}
 		if(ii!=2*2*nind){
 			fprintf(stderr,"error: expected %d sequences, read %d\n",2*2*nind,ii);
 			exit(1);
