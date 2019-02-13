@@ -9,7 +9,7 @@
 #include <time.h> 
 #include "reading.h"
 #include "calc.h"
-
+#include <cerrno>
 #include <string>
 #include <vector>
 
@@ -731,7 +731,7 @@ int main(int argc, char *argv[]) {
 	long double oldloglik,loglik;
 	double U[3][3],Usim,Udis;
 	int nj,ni,npi=1,sites_individuals,npar;
-	double *geom_score,*geom_nopi_score;
+	double *geom_score,*geom_nopi_score,mincov;
 	int warning=0;
 
 	std::vector<Contig> contigs;
@@ -755,8 +755,8 @@ int main(int argc, char *argv[]) {
 	}
 	fprintf(stdout,"\n");
 	
-	if (argc != 8) {
-		fprintf(stderr,"Usage: %s infile outfile mode errormodel heterogamety ploidy paralogs\n",argv[0]);
+	if (argc != 8 && argc != 9) {
+		fprintf(stderr,"Usage: %s infile outfile mode errormodel heterogamety ploidy paralogs (min_coverage)\n",argv[0]);
 		exit(1);
 	}
 	
@@ -847,6 +847,19 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr,"Paralogs should be either be \"o\" or \"0\" for orthologs only, \"p\" or \"1\" for including paralogy\n");
 		exit(1);	
 	}
+	if (argc == 9) {
+		char * fin;
+		errno=0;
+		mincov = std::strtod(argv[8], &fin);
+		if (*fin != '\0' || errno != 0 ) {
+			fprintf(stderr,"Failed to convert argument 9 (\"%s\") to double\n",argv[8]);
+			exit(1);
+		}
+	}
+	else {
+		fprintf(stdout,"No minimal coverage given; using all contigs with polymorphism\n");
+		mincov=0;
+	}
 	
 	foreach_j(model,[&](const auto j){
 			pi[j]=1./(double)npi;
@@ -872,8 +885,29 @@ int main(int argc, char *argv[]) {
 		if(npolysites==0) {
 			nnoncontigs++;
 		}
+		ni=0;
+		for (t=0; t<npolysites; t++){
+			for (i=0; i<6; i++) {
+				ni+=current_contig.snps[t].genotypes_by_sex[i];
+			}
+		}
+		contigs[k].coverage=(double)ni/(double)npolysites;
 	}
 	fprintf(stdout,"...and %d polymorphic sites\n",totsites);
+	std::vector<Contig>::iterator kcontig = contigs.begin();
+	while (kcontig != contigs.end()) {
+		if (kcontig->coverage < mincov || kcontig->snps.size() ==0) {
+        	kcontig = contigs.erase(kcontig);
+        }
+        else {
+        	kcontig++;
+        }
+	}
+	fprintf(stdout,"%d contigs remaining after filtering for coverage\n",contigs.size());
+	if(contigs.size()==0){
+		fprintf(stderr,"No contigs left; nothing to do.\n");
+		exit(0);
+	}
 	if(totsites==0){
 		fprintf(stderr,"No polymorphic sites found; nothing to do.\n");
 		exit(0);
@@ -1678,14 +1712,16 @@ int main(int argc, char *argv[]) {
 				
 
 //			fprintf(outfile,">%s\t%d",&contig[k*NAME_LEN],npolysites[k]);
-			fprintf(outfile,">%s\t%d",contigs[k].name.data(),npolysites);
-			ni=0;
-			for (t=0; t<npolysites; t++){
-				for (i=0; i<6; i++) {
-					ni+=current_contig.snps[t].genotypes_by_sex[i];
-				}
-			}
-			fprintf(outfile,"\t%f",(double)ni/(double)npolysites);
+//			fprintf(outfile,">%s\t%d",contigs[k].name.data(),npolysites);
+			fprintf(outfile,">%s\t%d",current_contig.name.data(),npolysites);
+//			ni=0;
+//			for (t=0; t<npolysites; t++){
+//				for (i=0; i<6; i++) {
+//					ni+=current_contig.snps[t].genotypes_by_sex[i];
+//				}
+//			}
+//			fprintf(outfile,"\t%f",(double)ni/(double)npolysites);
+			fprintf(outfile,"\t%f",current_contig.coverage);
 				pmax=0.0;
 				gmax=0.0;
 				rmax=0.0;

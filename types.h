@@ -16,6 +16,7 @@ struct SNP {
 
 struct Contig {
 	std::string name;
+	double coverage;
 	std::vector<SNP> snps; //number of snps
 };
 
