@@ -722,6 +722,7 @@ int main(int argc, char *argv[]) {
 	long double pidelta[JTYPES],**rhodelta,deltamax;
 	int mode=CONTIG,errormodel=ERRORS,plateausteps,nnoncontigs;
 	double stop=0.0001; //relative difference between parameter values used to signal convergence
+	double noconv=0.00001; //if a parameter value is below this value, stop evaluating it's contribution to convergence
 	double minimumvalue=1e-10; //if a parameter value falls below this value, stop evaluating its optimisation
 	double Q[3][3],e;
 	double maxl,sumgp;
@@ -1468,7 +1469,7 @@ int main(int argc, char *argv[]) {
 			//foreach_j(model,[&](const auto j){
 			for(j=0;j<JTYPES;j++) {
 				pidelta[j]= pi[j]> minimumvalue ? (pi[j]-oldpi[j])/oldpi[j] : 0.0;
-				if (fabsl(pidelta[j]) > fabsl(deltamax)) {
+				if (pi[j]> noconv && fabsl(pidelta[j]) > fabsl(deltamax)) {
 					deltamax=pidelta[j];
 				}
 				fprintf(stdout," %f (%Le)",pi[j],pidelta[j]);
@@ -1479,7 +1480,7 @@ int main(int argc, char *argv[]) {
 				fprintf(stdout,"; rho");
 				auto lfunc = [&](const auto l,const auto jl,const auto j){
 					rhodelta[j][l]= rho[j][l]> minimumvalue ? (rho[j][l]-oldrho[j][l])/oldrho[j][l] : 0.0;
-					if (fabsl(rhodelta[j][l]) > fabsl(deltamax)) {
+					if (rho[j][l] > noconv && fabsl(rhodelta[j][l]) > fabsl(deltamax)) {
 						deltamax=rhodelta[j][l];
 					}
 					if(l==0 || l==2){

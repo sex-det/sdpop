@@ -88,6 +88,7 @@ void countgenotypes(FILE *fp,int **sequence, int npos, int nind, int contiglengt
         
         //output gen format
         for(t=0;t<contiglength;t++){
+        	e0=e1=e2=0;
         	fprintf(fp,"%d",t+1);
         	for(i=0;i<nind;i++){ //males
         		if(t<npos){ //"real" polymorphic positions 
@@ -97,9 +98,11 @@ void countgenotypes(FILE *fp,int **sequence, int npos, int nind, int contiglengt
         				}
         				else if ((double)rand()/RAND_MAX < 0.5) { //errors
         					fprintf(fp,"\tAA|1");
+        					e1++;
         				}
         				else {
         					fprintf(fp,"\tTT|1");
+        					e1++;
         				}
         			}
         			else if(sequence[i][t]==0){ //homozygous for allele 1
@@ -108,32 +111,38 @@ void countgenotypes(FILE *fp,int **sequence, int npos, int nind, int contiglengt
         				}
         				else if ((double)rand()/RAND_MAX < e[0]/(e[0]+e[2])) { //errors
         					fprintf(fp,"\tAT|1");
+        					e0++;
         				}
         				else {
-       					fprintf(fp,"\tTT|1");
+        					fprintf(fp,"\tTT|1");
+        					e2++;
          				}
         			}
         			else { //homozygous for allele 2
         				if((double)rand()/RAND_MAX > e[0]+e[2]) { //no errors
-       					fprintf(fp,"\tTT|1");
+        					fprintf(fp,"\tTT|1");
          				}
         				else if ((double)rand()/RAND_MAX < e[0]/(e[0]+e[2])) { //errors
         					fprintf(fp,"\tAT|1");
+        					e0++;
         				}
         				else {
         					fprintf(fp,"\tAA|1");
+        					e2++;
         				}
         			}
         		}
         		else { //no polymorphism observed: add errors
         			if((double)rand()/RAND_MAX > e[0]+e[2]){ //no errors
-        					fprintf(fp,"\tAA|1");
+        				fprintf(fp,"\tAA|1");
         			}
         			else if ((double)rand()/RAND_MAX < e[0]/(e[0]+e[2])) { //errors
-        					fprintf(fp,"\tAT|1");
+        				fprintf(fp,"\tAT|1");
+        				e0++;
         			}
         			else {
        					fprintf(fp,"\tTT|1");
+       					e2++;
          			}
         		}
         	}
@@ -145,9 +154,11 @@ void countgenotypes(FILE *fp,int **sequence, int npos, int nind, int contiglengt
         				}
         				else if ((double)rand()/RAND_MAX < 0.5) { //errors
         					fprintf(fp,"\tAA|1");
+        					e1++;
         				}
         				else {
-       					fprintf(fp,"\tTT|1");
+        					fprintf(fp,"\tTT|1");
+        					e1++;
          				}
         			}
         			else if(sequence[i][t]==0){
@@ -156,9 +167,11 @@ void countgenotypes(FILE *fp,int **sequence, int npos, int nind, int contiglengt
         				}
         				else if ((double)rand()/RAND_MAX < e[0]/(e[0]+e[2])) { //errors
         					fprintf(fp,"\tAT|1");
+        					e0++;
         				}
         				else {
-       					fprintf(fp,"\tTT|1");
+        					fprintf(fp,"\tTT|1");
+        					e2++;
          				}
         			}
         			else {
@@ -167,30 +180,39 @@ void countgenotypes(FILE *fp,int **sequence, int npos, int nind, int contiglengt
         				}
         				else if ((double)rand()/RAND_MAX < e[0]/(e[0]+e[2])) { //errors
         					fprintf(fp,"\tAT|1");
+        					e0++;
         				}
         				else {
         					fprintf(fp,"\tAA|1");
+        					e2++;
         				}
         			}
         		}
         		else { //no polymorphism observed: add errors
         			if((double)rand()/RAND_MAX > e[0]+e[2]){ //no errors
-        					fprintf(fp,"\tAA|1");
+        				fprintf(fp,"\tAA|1");
         			}
         			else if ((double)rand()/RAND_MAX < e[0]/(e[0]+e[2])) { //errors
-        					fprintf(fp,"\tAT|1");
+        				fprintf(fp,"\tAT|1");
+						e0++;
         			}
         			else {
        					fprintf(fp,"\tTT|1");
+						e2++;
          			}
         		}
         	}
-        		fprintf(fp,"\n");
+        	fprintf(fp,"\n");			
+        	e0t+=e0;
+			e1t+=e1;
+			e2t+=e2;
+			npoly++;
+			
         }
     }
 	else {
-	//output cnt format
-	for(t=0;t<contiglength;t++){
+		//output cnt format
+		for(t=0;t<contiglength;t++){
 		n11m=n12m=n22m=0;
 		n11f=n12f=n22f=0;
 		e0=e1=e2=0;
@@ -440,6 +462,7 @@ int main (int argc, char *argv[]) {
 		}	
 		countgenotypes(outputf,sequence,npos,nind,contiglength,e);
 	}
+	fprintf(stdout,"ne0=%d, ne1=%d, e2=%d\n",e0t,e1t,e2t);
 	fprintf(stdout,"npoly=%d (%d genotypes), e0=%f, e1=%f, e2=%f\n",npoly,npoly*nind*2,(double)e0t/(npoly*nind*2),(double)e1t/(npoly*nind*2),(double)e2t/(npoly*nind*2));
 	
 	free(line);	
