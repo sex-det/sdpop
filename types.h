@@ -27,6 +27,7 @@ struct Individual {
 
 struct Genotype {
 	char nucleotides[2];
+	double probability;
 };
 
 struct Genotypes {

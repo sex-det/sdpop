@@ -756,23 +756,26 @@ int main(int argc, char *argv[]) {
 	}
 	fprintf(stdout,"\n");
 	
-	if (argc != 8 && argc != 9) {
+	if (argc < 8 && argc > 10) {
 		fprintf(stderr,"Usage: %s infile outfile mode errormodel heterogamety ploidy paralogs (min_coverage)\n",argv[0]);
 		exit(1);
 	}
-	
-	if((fp=fopen(argv[1],"r"))==NULL){
+
+	i=1;
+	if((fp=fopen(argv[i],"r"))==NULL){
 		fprintf(stderr,"error opening input file %s\n",argv[1]);
 		exit(1);
 	}
-	if((outfile=fopen(argv[2],"w"))==NULL){
+	i++;
+	if((outfile=fopen(argv[i],"w"))==NULL){
 		fprintf(stderr,"error opening output file %s\n",argv[2]);
 		exit(1);
 	}
-	if(strcmp(argv[3],"c")==0 || strcmp(argv[3],"1")==0) {
+	i++;
+	if(strcmp(argv[i],"c")==0 || strcmp(argv[i],"1")==0) {
 		mode=CONTIG;
 	}
-	else if (strcmp(argv[3],"s")==0 || strcmp(argv[3],"0")==0) {
+	else if (strcmp(argv[i],"s")==0 || strcmp(argv[i],"0")==0) {
 		mode=SITE;
 	}
 	else {
@@ -780,40 +783,52 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr,"Mode should be either \"c\" or \"1\" for contig-mode, or \"s\" or \"0\" for site-wise optimisation\n");
 		exit(1);	
 	}
+	i++;
 
 	e=0.0001;
-	
-	if(strcmp(argv[4],"n")==0 || strcmp(argv[4],"0")==0) {
+	if(strcmp(argv[i],"n")==0 || strcmp(argv[i],"0")==0) {
 		errormodel=NONE;
 		e=0.;
 	}
-	else if (strcmp(argv[4],"e")==0 || strcmp(argv[4],"1")==0) {
+	else if (strcmp(argv[i],"e")==0 || strcmp(argv[i],"1")==0) {
 		errormodel=ERRORS;
 	}
-	else if (strcmp(argv[4],"f")==0 || strcmp(argv[4],"2")==0) {
+	else if (strcmp(argv[i],"f")==0 || strcmp(argv[i],"2")==0) {
 		errormodel=FIXED;
+		i++;
+		char * fin;
+		errno=0;
+		e = std::strtod(argv[i], &fin);
+		if (*fin != '\0' || errno != 0 ) {
+			fprintf(stderr,"Failed to convert argument %d (\"%s\") to double\n",i,argv[i]);
+			exit(1);
+		}		
+	}
+	else if (strcmp(argv[i],"r")==0 || strcmp(argv[i],"3")==0) {
+		errormodel=READ_FROM_CNT_FILE;
 	}
 	else {
 		fprintf(stderr,"Usage: %s infile outfile mode errormodel heterogamety ploidy paralogs\n",argv[0]);
 		fprintf(stderr,"Errormodel should be either \"e\" or \"1\" to estimate errors, \"f\" or \"2\" to use fixed error rates, or \"n\" or \"0\" for no errors\n");
 		exit(1);	
 	}
-	
-	if(strcmp(argv[5],"n")==0 || strcmp(argv[5],"0")==0) {
+
+	i++;
+	if(strcmp(argv[i],"n")==0 || strcmp(argv[i],"0")==0) {
 		model.xy=0;
 		model.zw=0;
 	}
-	else if (strcmp(argv[5],"x")==0 || strcmp(argv[5],"1")==0) {
+	else if (strcmp(argv[i],"x")==0 || strcmp(argv[i],"1")==0) {
 		model.xy=1;
 		model.zw=0;
 		npi+=2;
 	}
-	else if (strcmp(argv[5],"z")==0 || strcmp(argv[5],"2")==0) {
+	else if (strcmp(argv[i],"z")==0 || strcmp(argv[i],"2")==0) {
 		model.xy=0;
 		model.zw=1;
 		npi+=2;
 	}
-	else if (strcmp(argv[5],"b")==0 || strcmp(argv[5],"3")==0) {
+	else if (strcmp(argv[i],"b")==0 || strcmp(argv[i],"3")==0) {
 		model.xy=1;
 		model.zw=1;
 		npi+=2;
@@ -823,11 +838,12 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr,"Heterogamety should be either be \"x\" or \"1\" for XY type, \"z\" or \"2\" for ZW type, \"n\" or \"0\" for no sex chromosomes, or \"b\" or \"3\" for both.\n");
 		exit(1);	
 	}
+	i++;
 
-	if(strcmp(argv[6],"d")==0 || strcmp(argv[6],"0")==0) {
+	if(strcmp(argv[i],"d")==0 || strcmp(argv[i],"0")==0) {
 		model.haploid=0;
 	}
-	else if (strcmp(argv[6],"h")==0 || strcmp(argv[6],"1")==0) {
+	else if (strcmp(argv[i],"h")==0 || strcmp(argv[i],"1")==0) {
 		model.haploid=1;
 		npi++;
 	}
@@ -836,10 +852,11 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr,"Ploidy should be either be \"d\" or \"0\" for diploid only, \"h\" or \"1\" for including haploid genes\n");
 		exit(1);	
 	}
-	if(strcmp(argv[7],"o")==0 || strcmp(argv[7],"0")==0) {
+	i++;
+	if(strcmp(argv[i],"o")==0 || strcmp(argv[i],"0")==0) {
 		model.paralogs=0;
 	}
-	else if (strcmp(argv[7],"p")==0 || strcmp(argv[7],"1")==0) {
+	else if (strcmp(argv[i],"p")==0 || strcmp(argv[i],"1")==0) {
 		model.paralogs=1;
 		npi++;
 	}
@@ -848,12 +865,13 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr,"Paralogs should be either be \"o\" or \"0\" for orthologs only, \"p\" or \"1\" for including paralogy\n");
 		exit(1);	
 	}
-	if (argc == 9) {
+	i++;
+	if (argc == i+1 ) {
 		char * fin;
 		errno=0;
-		mincov = std::strtod(argv[8], &fin);
+		mincov = std::strtod(argv[i], &fin);
 		if (*fin != '\0' || errno != 0 ) {
-			fprintf(stderr,"Failed to convert argument 9 (\"%s\") to double\n",argv[8]);
+			fprintf(stderr,"Failed to convert argument %d (\"%s\") to double\n",i,argv[i]);
 			exit(1);
 		}
 	}
@@ -873,13 +891,23 @@ int main(int argc, char *argv[]) {
 	fprintf(stdout,"Criterium for convergence: delta < %e\n",stop);
 	fprintf(stdout,"\n");
 	fprintf(stdout,"Reading...\n");
-	ncontigs=read_cnt_model(fp,NAME_LEN,model,contigs);
+	if(errormodel==READ_FROM_CNT_FILE){
+		e=-1;
+		ncontigs=read_cnt_model_error(fp,NAME_LEN,model,contigs,&e);
+		if(e<0){
+			fprintf(stdout,"Error: reading error rate from cnt file failed. Aborting.\n");
+			exit(1);
+		}
+	}
+	else {
+		ncontigs=read_cnt_model(fp,NAME_LEN,model,contigs);
+	}
 	fclose(fp);
 	
 	fprintf(stdout,"Found %d contigs\n",ncontigs);
 	totsites=0;
 	nnoncontigs=0;
-	for (k=0;k<contigs.size();k++) {
+	for (int k=0;k<contigs.size();k++) {
 		Contig & current_contig = contigs[k];
 		npolysites=current_contig.snps.size();
 		totsites+=npolysites;
@@ -892,7 +920,7 @@ int main(int argc, char *argv[]) {
 				ni+=current_contig.snps[t].genotypes_by_sex[i];
 			}
 		}
-		contigs[k].coverage=(double)ni/(double)npolysites;
+		current_contig.coverage=(double)ni/(double)npolysites;
 	}
 	fprintf(stdout,"...and %d polymorphic sites\n",totsites);
 	std::vector<Contig>::iterator kcontig = contigs.begin();

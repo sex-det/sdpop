@@ -55,15 +55,15 @@ char **parsenames(char *string,int *nind,int maxlength) {
 	return names;
 }
 
-Contig polyfilter(ContigGenotypes contiggenotypes, int *n3, int *n4, double *theta) {//number of positions and individuals,
+Contig polyfilter2(ContigGenotypes contiggenotypes, int *n3, int *n4, double *theta, int *ninformation, double *errorrate) {//number of positions and individuals,
 	// genotype matrix, pointer to the number of polymorphic sites
 	// function treats one contig
 	char nucvec[4] = {0};
 	int i,j,ii,randbit;
 	int div,n11f,n12f,n22f,n11m,n12m,n22m,nA,nT,nG,nC,nN;
 	char pos1,pos2,nuc1,nuc2;
-	int n,n2,nt,nf,npos,nind;
-	double a;
+	int n,n2,nt,nf,npos,nind,nsnind;
+	double a,error;
 	Contig contig;
 	
 	contig.name=contiggenotypes.name;
@@ -76,10 +76,16 @@ Contig polyfilter(ContigGenotypes contiggenotypes, int *n3, int *n4, double *the
 	nind=contiggenotypes.individuals.size();
 	
 	n=0;
+	nsnind=0;
+	error=0.;
 	for (j=0; j<npos; j++){
 		//count the number of alleles : A, T, G, C, N
 		nA=nT=nG=nC=nN=0;
 		for (i=0; i<nind; i++){ //loop through all chromosomes
+			if (contiggenotypes.genotypes[j].individualgenotypes[i].nucleotides[0] != 'N' && contiggenotypes.genotypes[j].individualgenotypes[i].nucleotides[1] != 'N'){
+				nsnind++;
+				error+=1.-contiggenotypes.genotypes[j].individualgenotypes[i].probability;
+			}
 			for (ii=0; ii<2; ii++){
 				switch (contiggenotypes.genotypes[j].individualgenotypes[i].nucleotides[ii]) {
 				case 'A' :
@@ -227,15 +233,28 @@ Contig polyfilter(ContigGenotypes contiggenotypes, int *n3, int *n4, double *the
 	*n3=nt;
 	*n4=nf;
 	*theta/=(double)npos;
+	*ninformation=nsnind;
+	if(nsnind==0){
+		*errorrate=0;
+	}
+	else {
+		*errorrate=error/(double)nsnind;
+	}
 	return contig;
 }
 
-void write_contig(FILE *outfile, Contig contig, int n3, int n4, double theta)
+Contig polyfilter(ContigGenotypes contiggenotypes, int *n3, int *n4, double *theta) {//number of positions and individuals,
+	int ninformation;
+	double errorrate;
+	return polyfilter2(contiggenotypes,n3,n4,theta,&ninformation,&errorrate);
+}
+
+void write_contig2(FILE *outfile, Contig contig, int n3, int n4, double theta, int ninformation, double errorrate)
 {
 	int t,i;
 	int npolysites;
 	npolysites=contig.snps.size();
-	fprintf(outfile,">%s\t%d\t%d\t%d\t%f\n",contig.name.data(),npolysites,n3,n4,theta);
+	fprintf(outfile,">%s\t%d\t%d\t%d\t%f\t%d\t%f\n",contig.name.data(),npolysites,n3,n4,theta,ninformation,errorrate);
 	if(npolysites>0) {
 		for (t=0; t<npolysites; t++){
 			fprintf(outfile,"%d\t",contig.snps[t].position);
@@ -248,12 +267,17 @@ void write_contig(FILE *outfile, Contig contig, int n3, int n4, double theta)
 	}
 }
 
+void write_contig(FILE *outfile, Contig contig, int n3, int n4, double theta)
+{
+	write_contig2(outfile, contig, n3, n4, theta, 0, 0);
+}
+
 int main(int argc, char *argv[]) 
 {
 	FILE *fp,*outfile;
 	std::string line;
 	int n3,n4;
-	double theta;
+	double theta,totalerror,errorrate;
 	int ncontigs,totsites=0;
 	int i,j,k,l,ni,firstcontig,pos;
 	int nfem,nmal,ifem,imal,nplus=0,chrpos;
@@ -262,7 +286,7 @@ int main(int argc, char *argv[])
 	char **name,**femname,**malname;
 	int *ffound,*mfound;
 	int nJ,nf,nm,nfound; //number of individuals
-	int randomise=0,ri,tempsex,datafmt;
+	int randomise=0,ri,tempsex,datafmt,totalinformation,ninformation;
 	int val,nnuc,maxnuc=5; //A, T, G, C, or N
 	char nuc[maxnuc];
 	char chrom[NAME_LEN];
@@ -339,6 +363,8 @@ int main(int argc, char *argv[])
 	
 	if(datafmt==READS2SNP) {
 		ContigGenotypes contiggenotypes;
+		totalinformation=0;
+		totalerror=0.;
 		
 		while ((c = std::fgetc(fp)) != EOF) { //loop through the file
 			line="";
@@ -355,10 +381,12 @@ int main(int argc, char *argv[])
 			if ( strncmp(line.data(),">",1)==0){
 				if (firstcontig==0) {	//Filtering polymorphisms for the last read contig
 					nJ=pos;
-					Contig contig=polyfilter(contiggenotypes,&n3,&n4,&theta);
+					Contig contig=polyfilter2(contiggenotypes,&n3,&n4,&theta,&ninformation,&errorrate);
+					totalinformation+=ninformation;
+					totalerror+=ninformation*errorrate;
 					contiggenotypes.individuals.clear();
 					contiggenotypes.genotypes.clear();
-					write_contig(outfile,contig,n3,n4,theta);
+					write_contig2(outfile,contig,n3,n4,theta,ninformation,errorrate);
 					totsites+=contig.snps.size();
 					free(sex);
 					free(foundsex);
@@ -451,8 +479,10 @@ int main(int argc, char *argv[])
 			}
 		}
 		nJ=j;
-		Contig contig=polyfilter(contiggenotypes,&n3,&n4,&theta);
-		write_contig(outfile,contig,n3,n4,theta);
+		Contig contig=polyfilter2(contiggenotypes,&n3,&n4,&theta,&ninformation,&errorrate);
+		totalinformation+=ninformation;
+		totalerror+=ninformation*errorrate;
+		write_contig2(outfile,contig,n3,n4,theta,ninformation,errorrate);
 		totsites+=contig.snps.size();
 		free(sex);
 		free(foundsex);
@@ -473,7 +503,11 @@ int main(int argc, char *argv[])
 			if (mfound[imal]==0) {
 				fprintf(stdout,"Individual %s was not found in any of the contigs\n",malname[imal]);
 			}
-		}
+		}		
+		
+		fprintf(stdout,"total number of genotypes: %d; mean error rate: %f\n",totalinformation,totalerror/totalinformation);
+		fprintf(outfile,"#mean error rate: %f\n",totalerror/totalinformation);
+
 	}
 	else if (datafmt==VCF){
 		

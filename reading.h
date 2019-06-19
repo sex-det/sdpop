@@ -21,7 +21,9 @@ int read_cnt(FILE *fp, int namelen, int chromosomes, char **contig_p, int **npol
 //int read_cnt2(FILE *fp, int namelen, int chromosomes, char **contig_p, int **npolysites_p, int ****polysite_p);
 //int read_cnt2(FILE *fp, int namelen, int chromosomes, std::vector<std::string>& contig_p, int **npolysites_p, int ****polysite_p);
 int read_cnt_model(FILE *fp, int namelen, const Model model, std::vector<Contig>& contigs);
+int read_cnt_model_error(FILE *fp, int namelen, const Model model, std::vector<Contig>& contigs, double *e);
 int read_cnt2(FILE *fp, int namelen, int chromosomes, std::vector<Contig>& contigs);
+int read_cnt3(FILE *fp, int namelen, int chromosomes, std::vector<Contig>& contigs, double *e);
 char **getgennames(const char *linein, int *ni);
 char **getvcfnames(const char *linein, int *nind);
 int vcfsnp(const char *line,char *nuc, int *nnuc);

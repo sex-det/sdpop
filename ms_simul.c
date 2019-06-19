@@ -97,11 +97,11 @@ void countgenotypes(FILE *fp,int **sequence, int npos, int nind, int contiglengt
         					fprintf(fp,"\tAT|1");
         				}
         				else if ((double)rand()/RAND_MAX < 0.5) { //errors
-        					fprintf(fp,"\tAA|1");
+        					fprintf(fp,"\tAA|0");
         					e1++;
         				}
         				else {
-        					fprintf(fp,"\tTT|1");
+        					fprintf(fp,"\tTT|0");
         					e1++;
         				}
         			}
@@ -110,11 +110,11 @@ void countgenotypes(FILE *fp,int **sequence, int npos, int nind, int contiglengt
         					fprintf(fp,"\tAA|1");
         				}
         				else if ((double)rand()/RAND_MAX < e[0]/(e[0]+e[2])) { //errors
-        					fprintf(fp,"\tAT|1");
+        					fprintf(fp,"\tAT|0");
         					e0++;
         				}
         				else {
-        					fprintf(fp,"\tTT|1");
+        					fprintf(fp,"\tTT|0");
         					e2++;
          				}
         			}
@@ -123,11 +123,11 @@ void countgenotypes(FILE *fp,int **sequence, int npos, int nind, int contiglengt
         					fprintf(fp,"\tTT|1");
          				}
         				else if ((double)rand()/RAND_MAX < e[0]/(e[0]+e[2])) { //errors
-        					fprintf(fp,"\tAT|1");
+        					fprintf(fp,"\tAT|0");
         					e0++;
         				}
         				else {
-        					fprintf(fp,"\tAA|1");
+        					fprintf(fp,"\tAA|0");
         					e2++;
         				}
         			}
@@ -137,11 +137,11 @@ void countgenotypes(FILE *fp,int **sequence, int npos, int nind, int contiglengt
         				fprintf(fp,"\tAA|1");
         			}
         			else if ((double)rand()/RAND_MAX < e[0]/(e[0]+e[2])) { //errors
-        				fprintf(fp,"\tAT|1");
+        				fprintf(fp,"\tAT|0");
         				e0++;
         			}
         			else {
-       					fprintf(fp,"\tTT|1");
+       					fprintf(fp,"\tTT|0");
        					e2++;
          			}
         		}
@@ -153,11 +153,11 @@ void countgenotypes(FILE *fp,int **sequence, int npos, int nind, int contiglengt
         					fprintf(fp,"\tAT|1");
         				}
         				else if ((double)rand()/RAND_MAX < 0.5) { //errors
-        					fprintf(fp,"\tAA|1");
+        					fprintf(fp,"\tAA|0");
         					e1++;
         				}
         				else {
-        					fprintf(fp,"\tTT|1");
+        					fprintf(fp,"\tTT|0");
         					e1++;
          				}
         			}
@@ -166,11 +166,11 @@ void countgenotypes(FILE *fp,int **sequence, int npos, int nind, int contiglengt
         					fprintf(fp,"\tAA|1");
         				}
         				else if ((double)rand()/RAND_MAX < e[0]/(e[0]+e[2])) { //errors
-        					fprintf(fp,"\tAT|1");
+        					fprintf(fp,"\tAT|0");
         					e0++;
         				}
         				else {
-        					fprintf(fp,"\tTT|1");
+        					fprintf(fp,"\tTT|0");
         					e2++;
          				}
         			}
@@ -179,11 +179,11 @@ void countgenotypes(FILE *fp,int **sequence, int npos, int nind, int contiglengt
         					fprintf(fp,"\tTT|1");
         				}
         				else if ((double)rand()/RAND_MAX < e[0]/(e[0]+e[2])) { //errors
-        					fprintf(fp,"\tAT|1");
+        					fprintf(fp,"\tAT|0");
         					e0++;
         				}
         				else {
-        					fprintf(fp,"\tAA|1");
+        					fprintf(fp,"\tAA|0");
         					e2++;
         				}
         			}
@@ -193,11 +193,11 @@ void countgenotypes(FILE *fp,int **sequence, int npos, int nind, int contiglengt
         				fprintf(fp,"\tAA|1");
         			}
         			else if ((double)rand()/RAND_MAX < e[0]/(e[0]+e[2])) { //errors
-        				fprintf(fp,"\tAT|1");
+        				fprintf(fp,"\tAT|0");
 						e0++;
         			}
         			else {
-       					fprintf(fp,"\tTT|1");
+       					fprintf(fp,"\tTT|0");
 						e2++;
          			}
         		}

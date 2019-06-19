@@ -24,6 +24,7 @@ enum DetailedSegregationTypes {
 #define NONE 0
 #define ERRORS 1
 #define FIXED 2
+#define READ_FROM_CNT_FILE 3
 #define N11 1
 #define N12 2
 #define N22 3

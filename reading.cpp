@@ -55,12 +55,17 @@ char int2DNA(int i)
 	}
 }
 
+int read_cnt_model_error(FILE *fp, int namelen, const Model model, std::vector<Contig>& contigs, double *e){
+	int n=0;
+	n=read_cnt3(fp,namelen,XY,contigs,e);
+	return n;
+}
+
 int read_cnt_model(FILE *fp, int namelen, const Model model, std::vector<Contig>& contigs){
 	int n=0;
 	n=read_cnt2(fp,namelen,XY,contigs);
 	return n;
 }
-
 
 //int read_cnt2(FILE *fp, int namelen, int chromosomes, char **contig_p, int **npolysites_p, int ****polysite_p) 
 int read_cnt2(FILE *fp, int namelen, int chromosomes, std::vector<Contig>& contigs) 
@@ -87,7 +92,86 @@ int read_cnt2(FILE *fp, int namelen, int chromosomes, std::vector<Contig>& conti
 		//We've read one line :
 		l++;
 		
+		if ( line[0] == '#' ) {
+			continue;
+		}
+		if ( line[0] == '>' ){
+			Contig tempcontig;
+
+			if ( line.size() >= namelen ) {
+				fprintf(stderr,"Error: a contig name is too long (more than %d characters) on line %d.\n",namelen-1,l);
+				exit(1);
+			}
+			sscanf(line.data(),">%s",tcont);
+			tempcontig.name=tcont;
+			contigs.push_back(tempcontig);
+			printf("%s\n",tempcontig.name.data());
+//			sscanf(line.data(),">%s",&contig[k*namelen]);
+			//			printf("%s\n",&contig[k*namelen]);
+		}
+		else { //line contains counts
+				
+				SNP tempsnp;
+				if(chromosomes==XY || chromosomes==NONE){
+					if(sscanf(line.data(),"%d\t%c%c\t%d\t%d\t%d\t%d\t%d\t%d\t",&tempsnp.position,&nuc1,&nuc2,
+						&tempsnp.genotypes_by_sex[N11F],&tempsnp.genotypes_by_sex[N12F],
+					&tempsnp.genotypes_by_sex[N22F],&tempsnp.genotypes_by_sex[N11M],&tempsnp.genotypes_by_sex[N12M],
+					&tempsnp.genotypes_by_sex[N22M])!=9){
+						fprintf(stderr,"In readcnt2: Error reading line %d\n",l);
+						fprintf(stderr,"Line: %s\n",line.data());
+						exit(1);
+					}
+				}
+				else {
+					if(sscanf(line.data(),"%d\t%c%c\t%d\t%d\t%d\t%d\t%d\t%d\t",&tempsnp.position,&nuc1,&nuc2,
+						&tempsnp.genotypes_by_sex[N11M],&tempsnp.genotypes_by_sex[N12M],
+					&tempsnp.genotypes_by_sex[N22M],&tempsnp.genotypes_by_sex[N11F],&tempsnp.genotypes_by_sex[N12F],
+					&tempsnp.genotypes_by_sex[N22F])!=9){
+						fprintf(stderr,"In readcnt2: Error reading line %d\n",l);
+						fprintf(stderr,"Line: %s\n",line.data());
+						exit(1);
+					}
+				}
+				tempsnp.alleles[0]=DNA2int(nuc1);				
+				tempsnp.alleles[1]=DNA2int(nuc2);				
+				Contig & current_contig = contigs.back();
+				current_contig.snps.push_back(tempsnp);
+		}
+	}
+	
+	return contigs.size();
+}
+
+int read_cnt3(FILE *fp, int namelen, int chromosomes, std::vector<Contig>& contigs, double *e) 
+//for reading cnt files that have the identity (A,T,C or G) of the alleles
+{
+	char tcont[namelen];
+	std::string line;
+	char nuc1,nuc2;
+	int c,l;
+
+	//reading counts from file 
+	l=0; //line number
+	c=0;
 		
+	while ((c = std::fgetc(fp)) != EOF) { //loop through the file
+		line="";
+		while ( (c != '\n') && (c != EOF) ) { //loop through the line
+			line+=char(c);
+			c = std::fgetc(fp);
+		}
+		if (line.size() < 1) { //empty line : suppose it's the end of the file
+			break;
+		}
+		//We've read one line :
+		l++;
+		
+		if ( line[0] == '#' ) {
+			if ( strncmp(line.data(),"#mean error rate: ",18)==0 ) {
+				sscanf(line.data(),"#mean error rate: %lf",e);
+			}
+			continue;
+		}
 		if ( line[0] == '>' ){
 			Contig tempcontig;
 
@@ -535,6 +619,7 @@ std::vector<Genotype> gengenotypes(int ni,int *sex,const char *linein)
 	char *line = (char*)calloc(strlen(linein)+1,sizeof(char));
 	char *tmpline = (char*)calloc(strlen(linein)+1,sizeof(char));
 	char nuc1,nuc2;
+	double proba;
 	
 	std::vector<Genotype> genotypes;
 	strcpy(line,linein);
@@ -544,9 +629,10 @@ std::vector<Genotype> gengenotypes(int ni,int *sex,const char *linein)
 	for (i=0; i<ni; i++){
 		if (sex[i]>=0) {
 			Genotype genotype;
-			sscanf(line,"\t%c%c|%*f%[^\n]",&nuc1,&nuc2,tmpline);
+			sscanf(line,"\t%c%c|%lf%[^\n]",&nuc1,&nuc2,&proba,tmpline);
 			genotype.nucleotides[0]=nuc1;
 			genotype.nucleotides[1]=nuc2;
+			genotype.probability=proba;
 			genotypes.push_back(genotype);
 		}
 		else {
