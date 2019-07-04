@@ -722,7 +722,7 @@ int main(int argc, char *argv[]) {
 	long double pidelta[JTYPES],**rhodelta,deltamax;
 	int mode=CONTIG,errormodel=ERRORS,plateausteps,nnoncontigs;
 	double stop=0.0001; //relative difference between parameter values used to signal convergence
-	double noconv=0.00001; //if a parameter value is below this value, stop evaluating it's contribution to convergence
+	double noconv=0.00001; //if a parameter value is below this value, stop evaluating its contribution to convergence
 	double minimumvalue=1e-10; //if a parameter value falls below this value, stop evaluating its optimisation
 	double Q[3][3],e;
 	double maxl,sumgp;

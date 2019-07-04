@@ -395,6 +395,7 @@ int main(int argc, char *argv[])
 	fprintf(stdout,"%d contigs selected.\n",ncontigs);
 	fclose(sdpfile);
 
+	if(ncontigs>0){
 	fprintf(stdout,"Reading data from file %s...\n",argv[2]);
 	ch='a';
 	l=0;
@@ -574,7 +575,7 @@ int main(int argc, char *argv[])
 	if(found>=0){ // print last sequences
 		outfunction(outfile,&contig[k*NAME_LEN],s,t,fixed,ns,pi_X,pi_Y,divergence,sequenceX,sequenceY);
 	}
-
+	}
 	
 	fclose(genfile);
 	if(ngencontigs!=ncontigs){

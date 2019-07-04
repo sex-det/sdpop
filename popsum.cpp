@@ -82,10 +82,10 @@ Contig polyfilter2(ContigGenotypes contiggenotypes, int *n3, int *n4, double *th
 		//count the number of alleles : A, T, G, C, N
 		nA=nT=nG=nC=nN=0;
 		for (i=0; i<nind; i++){ //loop through all chromosomes
-			if (contiggenotypes.genotypes[j].individualgenotypes[i].nucleotides[0] != 'N' && contiggenotypes.genotypes[j].individualgenotypes[i].nucleotides[1] != 'N'){
-				nsnind++;
-				error+=1.-contiggenotypes.genotypes[j].individualgenotypes[i].probability;
-			}
+//			if (contiggenotypes.genotypes[j].individualgenotypes[i].nucleotides[0] != 'N' && contiggenotypes.genotypes[j].individualgenotypes[i].nucleotides[1] != 'N'){
+//				nsnind++;
+//				error+=1.-contiggenotypes.genotypes[j].individualgenotypes[i].probability;
+//			}
 			for (ii=0; ii<2; ii++){
 				switch (contiggenotypes.genotypes[j].individualgenotypes[i].nucleotides[ii]) {
 				case 'A' :
@@ -157,6 +157,12 @@ Contig polyfilter2(ContigGenotypes contiggenotypes, int *n3, int *n4, double *th
 			}
 		}
 		else if (div == 2) { //simple polymorphism
+			for (i=0; i<nind; i++){ //loop through all chromosomes
+				if (contiggenotypes.genotypes[j].individualgenotypes[i].nucleotides[0] != 'N' && contiggenotypes.genotypes[j].individualgenotypes[i].nucleotides[1] != 'N'){
+					nsnind++;
+					error+=1.-contiggenotypes.genotypes[j].individualgenotypes[i].probability;
+				}
+			}
 			//randomize 
 			nuc1=nucvec[0];
 			nuc2=nucvec[1];
