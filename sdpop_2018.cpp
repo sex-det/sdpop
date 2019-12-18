@@ -23,7 +23,7 @@ Model model;
 
 extern int NAME_LEN;
 
-void initEM(std::vector<Contig>& contigs) {
+void initEM(std::vector<ContigA>& contigs) {
 	int n11f,n12f,n22f,n11m,n12m,n22m,nfem,nmal,ntot;
 	int k,t,jl,s,g,j;
 	int ncontigs,npolysites;
@@ -76,8 +76,8 @@ void initEM(std::vector<Contig>& contigs) {
 	
 	
 	for (k=0;k<contigs.size();k++) {
-		Contig & current_contig = contigs[k];
-		if((npolysites=current_contig.snps.size())>0) {
+		ContigA & current_contig = contigs[k];
+		if((npolysites=current_contig.varsites.size())>0) {
 			if((P[k]=(double ****)calloc((size_t)npolysites,sizeof(double ***)))==NULL) { 
 				fprintf(stderr,"error in memory allocation\n");
 				exit(1);
@@ -179,12 +179,12 @@ void initEM(std::vector<Contig>& contigs) {
 			}							
 			
 			for (t=0;t<npolysites;t++) {
-				n11f=current_contig.snps[t].genotypes_by_sex[N11F]; //female counts
-				n12f=current_contig.snps[t].genotypes_by_sex[N12F]; 
-				n22f=current_contig.snps[t].genotypes_by_sex[N22F]; 			
-				n11m=current_contig.snps[t].genotypes_by_sex[N11M]; //male counts
-				n12m=current_contig.snps[t].genotypes_by_sex[N12M]; 
-				n22m=current_contig.snps[t].genotypes_by_sex[N22M]; 			
+				n11f=current_contig.varsites[t].genotypes_by_sex[N11F]; //female counts
+				n12f=current_contig.varsites[t].genotypes_by_sex[N12F]; 
+				n22f=current_contig.varsites[t].genotypes_by_sex[N22F]; 			
+				n11m=current_contig.varsites[t].genotypes_by_sex[N11M]; //male counts
+				n12m=current_contig.varsites[t].genotypes_by_sex[N12M]; 
+				n22m=current_contig.varsites[t].genotypes_by_sex[N22M]; 			
 				
 				nfem=n11f+n12f+n22f;
 				nmal=n11m+n12m+n22m;
@@ -376,13 +376,13 @@ void initEM(std::vector<Contig>& contigs) {
 	}
 }
 
-void freeEM(std::vector<Contig>& contigs) {
+void freeEM(std::vector<ContigA>& contigs) {
 	int k,t,s,jl,j,g;
 	int npolysites;
 	
 	for(k=0; k<contigs.size(); k++){
-		Contig & current_contig = contigs[k];
-		npolysites=current_contig.snps.size();
+		ContigA & current_contig = contigs[k];
+		npolysites=current_contig.varsites.size();
 		for (t=0; t<npolysites; t++){
 			for(s=0;s<SEXES;s++){
 				for(jl=0;jl<JLTYPES;jl++){
@@ -424,14 +424,14 @@ void freeEM(std::vector<Contig>& contigs) {
 	free(expR);
 }
 
-long double totalcontigloglik(std::vector<Contig>& contigs, double *pi, double **rho) {
+long double totalcontigloglik(std::vector<ContigA>& contigs, double *pi, double **rho) {
 	long double loglik=0;
 	long double suml,sumj,temp[JTYPES];
 	int t,k,l;
 	
 	for (k=0;k<contigs.size();k++) {
-		Contig & current_contig = contigs[k];
-		int npolysites=current_contig.snps.size();
+		ContigA & current_contig = contigs[k];
+		int npolysites=current_contig.varsites.size();
 		sumj=0;
 		foreach_j(model,[&](const auto j){
 				//for(j=0;j<JTYPES;j++) {
@@ -498,14 +498,14 @@ long double totalcontigloglik(std::vector<Contig>& contigs, double *pi, double *
 	return loglik;
 }
 
-long double totalsiteloglik(std::vector<Contig>& contigs, double *pi, double **rho) {
+long double totalsiteloglik(std::vector<ContigA>& contigs, double *pi, double **rho) {
 	long double loglik=0;
 	long double sumj,sum3;
 	int t,k;
 	
 	for (k=0;k<contigs.size();k++) {
-		Contig & current_contig = contigs[k];
-		for(t=0;t<current_contig.snps.size();t++){
+		ContigA & current_contig = contigs[k];
+		for(t=0;t<current_contig.varsites.size();t++){
 			sumj=0;
 			foreach_j(model,[&](const auto j){
 					//for(j=0;j<JTYPES;j++) {
@@ -546,14 +546,14 @@ long double totalsiteloglik(std::vector<Contig>& contigs, double *pi, double **r
 	return loglik;
 }
 
-long double condsiteexpect(std::vector<Contig>& contigs, double *pi, double **rho, double Q[3][3])
+long double condsiteexpect(std::vector<ContigA>& contigs, double *pi, double **rho, double Q[3][3])
 {
 	long double tempgs,tempjl,tempgp,logexp=0;
 	int k,t,s,g,gp;
 	
 	for (k=0;k<contigs.size();k++) {
-		Contig & current_contig = contigs[k];
-		for(t=0;t<current_contig.snps.size();t++){
+		ContigA & current_contig = contigs[k];
+		for(t=0;t<current_contig.varsites.size();t++){
 			tempgs=0;
 			for(s=0;s<2;s++){
 				for(g=0;g<3;g++){
@@ -584,7 +584,7 @@ long double condsiteexpect(std::vector<Contig>& contigs, double *pi, double **rh
 							tempjl+=tempgp*expS[k][t][J_ZW]*expA[k][t][J_ZW][jl-JL_ZW1];
 						}
 					});					
-				tempgs+=current_contig.snps[t].genotypes_by_sex[g+3*s]*tempjl;
+				tempgs+=current_contig.varsites[t].genotypes_by_sex[g+3*s]*tempjl;
 				}
 			}
 			logexp+=tempgs;
@@ -604,14 +604,14 @@ long double condsiteexpect(std::vector<Contig>& contigs, double *pi, double **rh
 	}
 	return logexp;
 }
-long double condcontigexpect(std::vector<Contig>& contigs, double *pi, double **rho, double Q[3][3])
+long double condcontigexpect(std::vector<ContigA>& contigs, double *pi, double **rho, double Q[3][3])
 {
 	long double tempgs,tempjl,tempgp,logexp=0;
 	int k,t,s,g,gp;
 	
 	for (k=0;k<contigs.size();k++) {
-		Contig & current_contig = contigs[k];
-		for(t=0;t<current_contig.snps.size();t++){
+		ContigA & current_contig = contigs[k];
+		for(t=0;t<current_contig.varsites.size();t++){
 			tempgs=0;
 			for(s=0;s<2;s++){
 				for(g=0;g<3;g++){
@@ -642,7 +642,7 @@ long double condcontigexpect(std::vector<Contig>& contigs, double *pi, double **
 							tempjl+=tempgp*expR[k][J_ZW]*expA[k][t][J_ZW][jl-JL_ZW1];
 						}
 					});					
-				tempgs+=current_contig.snps[t].genotypes_by_sex[g+3*s]*tempjl;
+				tempgs+=current_contig.varsites[t].genotypes_by_sex[g+3*s]*tempjl;
 				}
 			}
 			logexp+=tempgs;
@@ -659,7 +659,7 @@ long double condcontigexpect(std::vector<Contig>& contigs, double *pi, double **
 					logexp+=expR[k][j]*log(pi[j]);
 			});
 		}
-//		if(current_contig.snps.size()>0){
+//		if(current_contig.varsites.size()>0){
 //			foreach_j(model,[&](const auto j){
 //					logexp+=expR[k][j]*log(pi[j]);
 //			});
@@ -735,7 +735,7 @@ int main(int argc, char *argv[]) {
 	double *geom_score,*geom_nopi_score,mincov;
 	int warning=0;
 
-	std::vector<Contig> contigs;
+	std::vector<ContigA> contigs;
 
 	for(j=0;j<JTYPES;j++){
 		pi[j]=0;
@@ -908,8 +908,8 @@ int main(int argc, char *argv[]) {
 	totsites=0;
 	nnoncontigs=0;
 	for (int k=0;k<contigs.size();k++) {
-		Contig & current_contig = contigs[k];
-		npolysites=current_contig.snps.size();
+		ContigA & current_contig = contigs[k];
+		npolysites=current_contig.varsites.size();
 		totsites+=npolysites;
 		if(npolysites==0) {
 			nnoncontigs++;
@@ -917,15 +917,15 @@ int main(int argc, char *argv[]) {
 		ni=0;
 		for (t=0; t<npolysites; t++){
 			for (i=0; i<6; i++) {
-				ni+=current_contig.snps[t].genotypes_by_sex[i];
+				ni+=current_contig.varsites[t].genotypes_by_sex[i];
 			}
 		}
 		current_contig.coverage=(double)ni/(double)npolysites;
 	}
 	fprintf(stdout,"...and %d polymorphic sites\n",totsites);
-	std::vector<Contig>::iterator kcontig = contigs.begin();
+	std::vector<ContigA>::iterator kcontig = contigs.begin();
 	while (kcontig != contigs.end()) {
-		if (kcontig->coverage < mincov || kcontig->snps.size() ==0) {
+		if (kcontig->coverage < mincov || kcontig->varsites.size() ==0) {
         	kcontig = contigs.erase(kcontig);
         }
         else {
@@ -996,6 +996,12 @@ int main(int argc, char *argv[]) {
     
 	foreach_l_xy(model,[&](const auto l,const auto jl,const auto j){
 	//for(l=0;l<LTYPES;l++) {
+		//if(l<=1){
+		//	rho[J_SEX][l]=0;
+		//}
+		//else {
+		//	rho[J_SEX][l]=1./2;
+		//}
 		rho[J_SEX][l]=1./4;
 	});		
 	foreach_l_zw(model,[&](const auto l,const auto jl,const auto j){
@@ -1012,11 +1018,11 @@ int main(int argc, char *argv[]) {
 	CondSiteProbs(contigs,model,Q,P,condsiteprob);
 	CondSegProbs(contigs,model,rho,condsiteprob,condsegprob);
 	//k=1;
-	//Contig & current_contig = contigs[k];
-	//npolysites=current_contig.snps.size();
+	//ContigA & current_contig = contigs[k];
+	//npolysites=current_contig.varsites.size();
 	//for(t=0;t<npolysites;t++){
 	//			for (i=0; i<6; i++) {
-	//				fprintf(stdout,"%d\t",current_contig.snps[t].genotypes_by_sex[i]);
+	//				fprintf(stdout,"%d\t",current_contig.varsites[t].genotypes_by_sex[i]);
 	//			}
 	//	for(j=0;j<JTYPES;j++){
 	//		fprintf(stdout,"%d: %Lf;\t",j,condsegprob[k][t][j]);
@@ -1056,14 +1062,15 @@ int main(int argc, char *argv[]) {
 	
 	it=0;
 	plateausteps=0;
+//	warning=1;
 	while(plateausteps<10 && warning!=1){
 		it++;
 		fprintf(stdout,"Iteration %d: ",it);
 
 		//E-step
 		for (k=0;k<contigs.size();k++) {
-			Contig & current_contig = contigs[k];
-			if((npolysites=current_contig.snps.size())>0) {
+			ContigA & current_contig = contigs[k];
+			if((npolysites=current_contig.varsites.size())>0) {
 				// para, XY and ZW detailed types
 					for(t=0;t<npolysites;t++){
 						if(model.xy && pi[J_SEX]>minimumvalue){
@@ -1081,9 +1088,9 @@ int main(int argc, char *argv[]) {
 							loghorner(4,lmax,templ,rho[J_SEX],expA[k][t][J_SEX]);
 							foreach_l_xy(model,[&](const auto l,const auto jl,const auto j){
 									if(isnan(expA[k][t][j][l])){
-										fprintf(stderr,"NaN produced (E-step, new value for A): contig %d, site %d, type %d, subtype %d (%d): %e\n",k,current_contig.snps[t].position,j,jl,l,expA[k][t][j][l]);
+										fprintf(stderr,"NaN produced (E-step, new value for A): contig %d, site %d, type %d, subtype %d (%d): %e\n",k,current_contig.varsites[t].position,j,jl,l,expA[k][t][j][l]);
 										for (i=0; i<6; i++) {
-											fprintf(stderr,"%d\t",current_contig.snps[0].genotypes_by_sex[i]);
+											fprintf(stderr,"%d\t",current_contig.varsites[0].genotypes_by_sex[i]);
 										}
 										fprintf(stderr,"\n");
 										foreach_jl(model,[&](const auto jl){
@@ -1097,7 +1104,7 @@ int main(int argc, char *argv[]) {
 										warning=1;
 									}
 									else if(isinf(expA[k][t][j][l])){
-										fprintf(stderr,"Inf produced (expA): contig %d, site %d, type %d, subtype %d (%d): %e\n",k,current_contig.snps[t].position,j,jl,l,expA[k][t][j][l]);
+										fprintf(stderr,"Inf produced (expA): contig %d, site %d, type %d, subtype %d (%d): %e\n",k,current_contig.varsites[t].position,j,jl,l,expA[k][t][j][l]);
 									}
 							});
 						}
@@ -1140,9 +1147,9 @@ int main(int argc, char *argv[]) {
 							foreach_j(model,[&](const auto j){
 									//for(j=0;j<JTYPES;j++){
 									if(isnan(expS[k][t][j])){
-										fprintf(stderr,"NaN produced (expS): contig %d, site %d, type %d: %f\n",k,current_contig.snps[t].position,j,expS[k][t][j]);
+										fprintf(stderr,"NaN produced (expS): contig %d, site %d, type %d: %f\n",k,current_contig.varsites[t].position,j,expS[k][t][j]);
 										for (i=0; i<6; i++) {
-											fprintf(stderr,"%d\t",current_contig.snps[0].genotypes_by_sex[i]);
+											fprintf(stderr,"%d\t",current_contig.varsites[0].genotypes_by_sex[i]);
 										}
 										fprintf(stderr,"\n");
 										foreach_jl(model,[&](const auto jl){
@@ -1156,7 +1163,7 @@ int main(int argc, char *argv[]) {
 										warning=1;
 									}
 									else if(isinf(expS[k][t][j])){
-										fprintf(stderr,"Inf produced (expS): contig %d, site %d, type %d: %f\n",k,current_contig.snps[t].position,j,expS[k][t][j]);
+										fprintf(stderr,"Inf produced (expS): contig %d, site %d, type %d: %f\n",k,current_contig.varsites[t].position,j,expS[k][t][j]);
 									}
 							});
 							//					horner(JTYPES,jmax,temp,pi,expS[k][t]);
@@ -1205,7 +1212,7 @@ int main(int argc, char *argv[]) {
 			//if(k==0){
 			//	printf("\n");
 			//	for (i=0; i<6; i++) {
-			//		printf("%d\t",current_contig.snps[0].genotypes_by_sex[i]);
+			//		printf("%d\t",current_contig.varsites[0].genotypes_by_sex[i]);
 			//	}
 			//	printf("\n");
 			//}
@@ -1275,8 +1282,8 @@ int main(int argc, char *argv[]) {
 				sumET=0;
 				totsites=0;
 				for (k=0;k<contigs.size();k++) {
-					Contig & current_contig = contigs[k];
-					if((npolysites=current_contig.snps.size())>0) {
+					ContigA & current_contig = contigs[k];
+					if((npolysites=current_contig.varsites.size())>0) {
 						for (t=0; t<npolysites; t++){
 							sumET+=expS[k][t][j];
 						}
@@ -1297,8 +1304,8 @@ int main(int argc, char *argv[]) {
 			//for(j=0;j<JTYPES;j++){ 
 				sumET=0;
 				for (k=0;k<contigs.size();k++) {
-					Contig & current_contig = contigs[k];
-					if((npolysites=current_contig.snps.size())>0) {
+					ContigA & current_contig = contigs[k];
+					if((npolysites=current_contig.varsites.size())>0) {
 						sumET+=expR[k][j];
 					}
 				}
@@ -1321,8 +1328,8 @@ int main(int argc, char *argv[]) {
 			sumET=0;
 			weights=0;
 			for (k=0;k<contigs.size();k++) {
-				Contig & current_contig = contigs[k];
-				if((npolysites=current_contig.snps.size())>0) {
+				ContigA & current_contig = contigs[k];
+				if((npolysites=current_contig.varsites.size())>0) {
 					for (t=0; t<npolysites; t++){
 						if(mode==SITE){
 							sumET+=(expA[k][t][J_SEX][0]+expA[k][t][J_SEX][1])*expS[k][t][J_SEX];
@@ -1344,8 +1351,8 @@ int main(int argc, char *argv[]) {
 			sumET=0;
 			weights=0;
 			for (k=0;k<contigs.size();k++) {
-				Contig & current_contig = contigs[k];
-				if((npolysites=current_contig.snps.size())>0) {
+				ContigA & current_contig = contigs[k];
+				if((npolysites=current_contig.varsites.size())>0) {
 					for (t=0; t<npolysites; t++){
 						if(mode==SITE){
 							sumET+=(expA[k][t][J_ZW][0]+expA[k][t][J_ZW][1])*expS[k][t][J_ZW];
@@ -1380,8 +1387,8 @@ int main(int argc, char *argv[]) {
 				for(gp=0;gp<3;gp++){
 					U[g][gp]=0;
 					for (k=0;k<contigs.size();k++) {
-						Contig & current_contig = contigs[k];
-						if((npolysites=current_contig.snps.size())>0) {
+						ContigA & current_contig = contigs[k];
+						if((npolysites=current_contig.varsites.size())>0) {
 							for (t=0; t<npolysites; t++){
 								for(s=0;s<2;s++) {
 									temp[s]=0;
@@ -1389,14 +1396,14 @@ int main(int argc, char *argv[]) {
 										if(mode==SITE){
 											temp[s]+=(long double)expTG[k][t][s][jl][g][gp]*(long double)expS[k][t][j]*(long double)expA[k][t][j][l];
 											if(isnan(temp[s])){
-												fprintf(stderr,"NaN produced (M-step, new value for e): contig %d, site %d, sex %d, type %d, subtype %d (%d): %Le\n",k,current_contig.snps[t].position,s,j,jl,l,temp[s]);
+												fprintf(stderr,"NaN produced (M-step, new value for e): contig %d, site %d, sex %d, type %d, subtype %d (%d): %Le\n",k,current_contig.varsites[t].position,s,j,jl,l,temp[s]);
 												fprintf(stderr,"%e\t%e\t%e\n",expTG[k][t][s][jl][g][gp],expS[k][t][j],expA[k][t][j][l]);
 											}										
 										}
 										else {
 											temp[s]+=(long double)expTG[k][t][s][jl][g][gp]*(long double)expR[k][j]*(long double)expA[k][t][j][l];
 											if(isnan(temp[s])){
-												fprintf(stderr,"NaN produced (M-step, new value for e): contig %d, site %d, sex %d, type %d, subtype %d (%d): %Le\n",k,current_contig.snps[t].position,s,j,jl,l,temp[s]);
+												fprintf(stderr,"NaN produced (M-step, new value for e): contig %d, site %d, sex %d, type %d, subtype %d (%d): %Le\n",k,current_contig.varsites[t].position,s,j,jl,l,temp[s]);
 												fprintf(stderr,"%e\t%e\t%e\n",expTG[k][t][s][jl][g][gp],expR[k][j],expA[k][t][j][l]);
 											}										
 										}
@@ -1411,7 +1418,7 @@ int main(int argc, char *argv[]) {
 													temp[s]+=(long double)expTG[k][t][s][j][g][gp]*(long double)expR[k][j];
 												}
 												if(isnan(temp[s])){
-													fprintf(stderr,"NaN produced (M-step, new value for e): contig %d, site %d, sex %d, type %d: %Le\n",k,current_contig.snps[t].position,s,j,temp[s]);
+													fprintf(stderr,"NaN produced (M-step, new value for e): contig %d, site %d, sex %d, type %d: %Le\n",k,current_contig.varsites[t].position,s,j,temp[s]);
 												}
 											}
 											if(j==J_PARA){
@@ -1431,7 +1438,7 @@ int main(int argc, char *argv[]) {
 													temp[s]+=(long double)expTG[k][t][s][JL_HEMI][g][gp]*(long double)expR[k][j];
 												}
 												if(isnan(temp[s])){
-													fprintf(stderr,"NaN produced (M-step, new value for e): contig %d, site %d, sex %d, type %d: %Le\n",k,current_contig.snps[t].position,s,j,temp[s]);
+													fprintf(stderr,"NaN produced (M-step, new value for e): contig %d, site %d, sex %d, type %d: %Le\n",k,current_contig.varsites[t].position,s,j,temp[s]);
 												}
 											}
 											if(j==J_SEX){
@@ -1445,7 +1452,7 @@ int main(int argc, char *argv[]) {
 													temp[s]+=(long double)expTG[k][t][s][JL_ZHEMI][g][gp]*(long double)expR[k][j];
 												}
 												if(isnan(temp[s])){
-													fprintf(stderr,"NaN produced (M-step, new value for e): contig %d, site %d, sex %d, type %d: %Le\n",k,current_contig.snps[t].position,s,j,temp[s]);
+													fprintf(stderr,"NaN produced (M-step, new value for e): contig %d, site %d, sex %d, type %d: %Le\n",k,current_contig.varsites[t].position,s,j,temp[s]);
 												}
 											}
 											if(j==J_ZW){
@@ -1453,11 +1460,11 @@ int main(int argc, char *argv[]) {
 											}
 									});
 									if(isnan(temp[s])){
-										fprintf(stderr,"NaN produced (M-step, new value for e): contig %d, site %d, sex %d: %Le\n",k,current_contig.snps[t].position,s,temp[s]);
+										fprintf(stderr,"NaN produced (M-step, new value for e): contig %d, site %d, sex %d: %Le\n",k,current_contig.varsites[t].position,s,temp[s]);
 									}
-									temp[s]*=(long double)current_contig.snps[t].genotypes_by_sex[g+3*s];
+									temp[s]*=(long double)current_contig.varsites[t].genotypes_by_sex[g+3*s];
 									if(isnan(temp[s])){
-										fprintf(stderr,"NaN produced (M-step, new value for e): contig %d, site %d, sex %d: %Le\n",k,current_contig.snps[t].position,s,temp[s]);
+										fprintf(stderr,"NaN produced (M-step, new value for e): contig %d, site %d, sex %d: %Le\n",k,current_contig.varsites[t].position,s,temp[s]);
 										warning=1;
 									}
 								}
@@ -1591,11 +1598,11 @@ int main(int argc, char *argv[]) {
 	fprintf(outfile,", BIC (contigs): %Lf",-2.*loglik+npar*log(ncontigs-nnoncontigs));
 	sites_individuals=0;
 	for (k=0;k<contigs.size();k++) {
-		Contig & current_contig = contigs[k];
-		npolysites=current_contig.snps.size();
+		ContigA & current_contig = contigs[k];
+		npolysites=current_contig.varsites.size();
 		for (t=0; t<npolysites; t++){
 			for (i=0; i<6; i++) {
-				sites_individuals+=current_contig.snps[t].genotypes_by_sex[i];
+				sites_individuals+=current_contig.varsites[t].genotypes_by_sex[i];
 			}			
 		}
 	}
@@ -1695,9 +1702,9 @@ int main(int argc, char *argv[]) {
 	fprintf(outfile,"j_max\n");
 	
 	for (k=0;k<contigs.size();k++) {
-		Contig & current_contig = contigs[k];
+		ContigA & current_contig = contigs[k];
 		//calculate likelihoods and posterior probabilities per contig 
-			if((npolysites=current_contig.snps.size())>0) {
+			if((npolysites=current_contig.varsites.size())>0) {
 				if (mode == SITE ) { //calculate mean posterior
 					foreach_j(model,[&](const auto j){
 					//for(j=0;j<JTYPES;j++) {
@@ -1746,7 +1753,7 @@ int main(int argc, char *argv[]) {
 //			ni=0;
 //			for (t=0; t<npolysites; t++){
 //				for (i=0; i<6; i++) {
-//					ni+=current_contig.snps[t].genotypes_by_sex[i];
+//					ni+=current_contig.varsites[t].genotypes_by_sex[i];
 //				}
 //			}
 //			fprintf(outfile,"\t%f",(double)ni/(double)npolysites);
@@ -1779,10 +1786,10 @@ int main(int argc, char *argv[]) {
 			fprintf(outfile,"\t%d %d %d\n",jmax+1,lmax+1,nmax+1);
 			
 			for (t=0; t<npolysites; t++){
-				fprintf(outfile,"%d\t",current_contig.snps[t].position);
-				fprintf(outfile,"%c%c\t",int2DNA(current_contig.snps[t].alleles[0]),int2DNA(current_contig.snps[t].alleles[1]));			
+				fprintf(outfile,"%d\t",current_contig.varsites[t].position);
+				fprintf(outfile,"%s,%s\t",current_contig.varsites[t].alleles[0].data(),current_contig.varsites[t].alleles[1].data());			
 				for (i=0; i<6; i++) {
-					fprintf(outfile,"%d\t",current_contig.snps[t].genotypes_by_sex[i]);
+					fprintf(outfile,"%d\t",current_contig.varsites[t].genotypes_by_sex[i]);
 				}
 				//calculate estimated frequencies of allele 1 on X and Y
 				//first method: fx and fy correspond to those matching with the most probable XY segregation subtype

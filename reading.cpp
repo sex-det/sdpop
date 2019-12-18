@@ -55,25 +55,25 @@ char int2DNA(int i)
 	}
 }
 
-int read_cnt_model_error(FILE *fp, int namelen, const Model model, std::vector<Contig>& contigs, double *e){
+int read_cnt_model_error(FILE *fp, int namelen, const Model model, std::vector<ContigA>& contigs, double *e){
 	int n=0;
 	n=read_cnt3(fp,namelen,XY,contigs,e);
 	return n;
 }
 
-int read_cnt_model(FILE *fp, int namelen, const Model model, std::vector<Contig>& contigs){
+int read_cnt_model(FILE *fp, int namelen, const Model model, std::vector<ContigA>& contigs){
 	int n=0;
 	n=read_cnt2(fp,namelen,XY,contigs);
 	return n;
 }
 
 //int read_cnt2(FILE *fp, int namelen, int chromosomes, char **contig_p, int **npolysites_p, int ****polysite_p) 
-int read_cnt2(FILE *fp, int namelen, int chromosomes, std::vector<Contig>& contigs) 
+int read_cnt2(FILE *fp, int namelen, int chromosomes, std::vector<ContigA>& contigs) 
 //for reading cnt files that have the identity (A,T,C or G) of the alleles
 {
 	char tcont[namelen];
 	std::string line;
-	char nuc1,nuc2;
+	char nuc1[namelen],nuc2[namelen];
 	int c,l;
 
 	//reading counts from file 
@@ -96,7 +96,7 @@ int read_cnt2(FILE *fp, int namelen, int chromosomes, std::vector<Contig>& conti
 			continue;
 		}
 		if ( line[0] == '>' ){
-			Contig tempcontig;
+			ContigA tempcontig;
 
 			if ( line.size() >= namelen ) {
 				fprintf(stderr,"Error: a contig name is too long (more than %d characters) on line %d.\n",namelen-1,l);
@@ -111,43 +111,43 @@ int read_cnt2(FILE *fp, int namelen, int chromosomes, std::vector<Contig>& conti
 		}
 		else { //line contains counts
 				
-				SNP tempsnp;
+				Varsite tempvarsite;
 				if(chromosomes==XY || chromosomes==NONE){
-					if(sscanf(line.data(),"%d\t%c%c\t%d\t%d\t%d\t%d\t%d\t%d\t",&tempsnp.position,&nuc1,&nuc2,
-						&tempsnp.genotypes_by_sex[N11F],&tempsnp.genotypes_by_sex[N12F],
-					&tempsnp.genotypes_by_sex[N22F],&tempsnp.genotypes_by_sex[N11M],&tempsnp.genotypes_by_sex[N12M],
-					&tempsnp.genotypes_by_sex[N22M])!=9){
+					if(sscanf(line.data(),"%d\t%[^,],%s\t%d\t%d\t%d\t%d\t%d\t%d\t",&tempvarsite.position,nuc1,nuc2,
+						&tempvarsite.genotypes_by_sex[N11F],&tempvarsite.genotypes_by_sex[N12F],
+					&tempvarsite.genotypes_by_sex[N22F],&tempvarsite.genotypes_by_sex[N11M],&tempvarsite.genotypes_by_sex[N12M],
+					&tempvarsite.genotypes_by_sex[N22M])!=9){
 						fprintf(stderr,"In readcnt2: Error reading line %d\n",l);
 						fprintf(stderr,"Line: %s\n",line.data());
 						exit(1);
 					}
 				}
 				else {
-					if(sscanf(line.data(),"%d\t%c%c\t%d\t%d\t%d\t%d\t%d\t%d\t",&tempsnp.position,&nuc1,&nuc2,
-						&tempsnp.genotypes_by_sex[N11M],&tempsnp.genotypes_by_sex[N12M],
-					&tempsnp.genotypes_by_sex[N22M],&tempsnp.genotypes_by_sex[N11F],&tempsnp.genotypes_by_sex[N12F],
-					&tempsnp.genotypes_by_sex[N22F])!=9){
+					if(sscanf(line.data(),"%d\t%[^,],%s\t%d\t%d\t%d\t%d\t%d\t%d\t",&tempvarsite.position,nuc1,nuc2,
+						&tempvarsite.genotypes_by_sex[N11M],&tempvarsite.genotypes_by_sex[N12M],
+					&tempvarsite.genotypes_by_sex[N22M],&tempvarsite.genotypes_by_sex[N11F],&tempvarsite.genotypes_by_sex[N12F],
+					&tempvarsite.genotypes_by_sex[N22F])!=9){
 						fprintf(stderr,"In readcnt2: Error reading line %d\n",l);
 						fprintf(stderr,"Line: %s\n",line.data());
 						exit(1);
 					}
 				}
-				tempsnp.alleles[0]=DNA2int(nuc1);				
-				tempsnp.alleles[1]=DNA2int(nuc2);				
-				Contig & current_contig = contigs.back();
-				current_contig.snps.push_back(tempsnp);
+				tempvarsite.alleles.push_back(nuc1);				
+				tempvarsite.alleles.push_back(nuc2);				
+				ContigA & current_contig = contigs.back();
+				current_contig.varsites.push_back(tempvarsite);
 		}
 	}
 	
 	return contigs.size();
 }
 
-int read_cnt3(FILE *fp, int namelen, int chromosomes, std::vector<Contig>& contigs, double *e) 
+int read_cnt3(FILE *fp, int namelen, int chromosomes, std::vector<ContigA>& contigs, double *e) 
 //for reading cnt files that have the identity (A,T,C or G) of the alleles
 {
 	char tcont[namelen];
 	std::string line;
-	char nuc1,nuc2;
+	char nuc1[namelen],nuc2[namelen];
 	int c,l;
 
 	//reading counts from file 
@@ -173,7 +173,7 @@ int read_cnt3(FILE *fp, int namelen, int chromosomes, std::vector<Contig>& conti
 			continue;
 		}
 		if ( line[0] == '>' ){
-			Contig tempcontig;
+			ContigA tempcontig;
 
 			if ( line.size() >= namelen ) {
 				fprintf(stderr,"Error: a contig name is too long (more than %d characters) on line %d.\n",namelen-1,l);
@@ -188,31 +188,31 @@ int read_cnt3(FILE *fp, int namelen, int chromosomes, std::vector<Contig>& conti
 		}
 		else { //line contains counts
 				
-				SNP tempsnp;
+				Varsite tempvarsite;
 				if(chromosomes==XY || chromosomes==NONE){
-					if(sscanf(line.data(),"%d\t%c%c\t%d\t%d\t%d\t%d\t%d\t%d\t",&tempsnp.position,&nuc1,&nuc2,
-						&tempsnp.genotypes_by_sex[N11F],&tempsnp.genotypes_by_sex[N12F],
-					&tempsnp.genotypes_by_sex[N22F],&tempsnp.genotypes_by_sex[N11M],&tempsnp.genotypes_by_sex[N12M],
-					&tempsnp.genotypes_by_sex[N22M])!=9){
+					if(sscanf(line.data(),"%d\t%[^,],%s\t%d\t%d\t%d\t%d\t%d\t%d\t",&tempvarsite.position,nuc1,nuc2,
+						&tempvarsite.genotypes_by_sex[N11F],&tempvarsite.genotypes_by_sex[N12F],
+					&tempvarsite.genotypes_by_sex[N22F],&tempvarsite.genotypes_by_sex[N11M],&tempvarsite.genotypes_by_sex[N12M],
+					&tempvarsite.genotypes_by_sex[N22M])!=9){
 						fprintf(stderr,"In readcnt2: Error reading line %d\n",l);
 						fprintf(stderr,"Line: %s\n",line.data());
 						exit(1);
 					}
 				}
 				else {
-					if(sscanf(line.data(),"%d\t%c%c\t%d\t%d\t%d\t%d\t%d\t%d\t",&tempsnp.position,&nuc1,&nuc2,
-						&tempsnp.genotypes_by_sex[N11M],&tempsnp.genotypes_by_sex[N12M],
-					&tempsnp.genotypes_by_sex[N22M],&tempsnp.genotypes_by_sex[N11F],&tempsnp.genotypes_by_sex[N12F],
-					&tempsnp.genotypes_by_sex[N22F])!=9){
+					if(sscanf(line.data(),"%d\t%[^,],%s\t%d\t%d\t%d\t%d\t%d\t%d\t",&tempvarsite.position,nuc1,nuc2,
+						&tempvarsite.genotypes_by_sex[N11M],&tempvarsite.genotypes_by_sex[N12M],
+					&tempvarsite.genotypes_by_sex[N22M],&tempvarsite.genotypes_by_sex[N11F],&tempvarsite.genotypes_by_sex[N12F],
+					&tempvarsite.genotypes_by_sex[N22F])!=9){
 						fprintf(stderr,"In readcnt2: Error reading line %d\n",l);
 						fprintf(stderr,"Line: %s\n",line.data());
 						exit(1);
 					}
 				}
-				tempsnp.alleles[0]=DNA2int(nuc1);				
-				tempsnp.alleles[1]=DNA2int(nuc2);				
-				Contig & current_contig = contigs.back();
-				current_contig.snps.push_back(tempsnp);
+				tempvarsite.alleles.push_back(nuc1);				
+				tempvarsite.alleles.push_back(nuc2);				
+				ContigA & current_contig = contigs.back();
+				current_contig.varsites.push_back(tempvarsite);
 		}
 	}
 	
@@ -527,6 +527,35 @@ int vcfsnp(const char *line,char *nuc, int *nnuc) //test if position is a snp or
 	return 0;
 }
 
+std::vector<std::string> vcfsnpindel(const char *line) //read alleles
+{
+	char allele1[NAME_LEN],allele2[NAME_LEN];
+	int i;
+	std::vector<std::string> alleles;
+	
+	sscanf(line,"%*s\t%*s\t%*s\t%s\t%s",allele1,allele2);
+	
+//	fprintf(stdout,"%s\t%s\t%d\t%d\t",allele1,allele2,(int)strlen(allele1),(int)strlen(allele2));
+	std::string tmpallele;
+	tmpallele=allele1;
+	alleles.push_back(tmpallele);
+	if(allele2[0]!='.'){
+		//allele2 might be a comma-separated list
+		tmpallele="";
+		for(i=0;i<(int)strlen(allele2);i++){
+			if(allele2[i]!=','){
+				tmpallele+=allele2[i];
+			}
+			else {
+				alleles.push_back(tmpallele);
+				tmpallele="";
+			}
+		}
+		alleles.push_back(tmpallele);
+	}
+	return alleles;
+}
+
 int findsex(char **name, int ni, char **femname, int nfem, char **malname, int nmal, int *sex, int *foundsex, int *ffound, int *nfgen, int *mfound, int *nmgen)
 {
 	//Find out the sex of the individuals.
@@ -613,27 +642,120 @@ std::vector<Genotype> vcfgenotypes(int ni, int *sex, const char *linein, char *n
 	return genotypes;
 }
 
-std::vector<Genotype> gengenotypes(int ni,int *sex,const char *linein)
+std::vector<GenotypeA> vcfalleles(int ni, int *sex, const char *linein)
 {
-	int i;
+	int i,c,ii;
+	char vcfformatstring[NAME_LEN],genotypestring[NAME_LEN];
 	char *line = (char*)calloc(strlen(linein)+1,sizeof(char));
 	char *tmpline = (char*)calloc(strlen(linein)+1,sizeof(char));
-	char nuc1,nuc2;
+	
+	std::vector<GenotypeA> genotypes;
+	strcpy(line,linein);
+	
+	//strip fields we don't use 
+	sscanf(line,"%*s\t%*s\t%*s\t%*s\t%*s\t%*s\t%*s\t%*s\t%s%[^\n]",vcfformatstring,tmpline);
+	strcpy(line,tmpline);
+	if(strncmp(vcfformatstring,"GT",2)!=0){
+		fprintf(stderr,"Error: this doesn't seem to be a supported format (\"GT\" tag not found where expected)\n");
+		exit(1);					
+	}
+	
+	for (i=0; i<ni; i++){
+		if (sex[i]>=0) {
+			GenotypeA genotype;
+			sscanf(line,"\t%s%[^\n]",genotypestring,tmpline);
+			for(ii=0;ii<2;ii++){
+				c=genotypestring[2*ii];
+				if(c=='.'){
+					genotype.allele.push_back(-1);
+					//									genotypes[j*nfound*2+2*fi+ii]='N';
+					if(ii==0){
+						genotypestring[2]='.';
+					}
+				}
+				else if ( isdigit(c) ) {
+					genotype.allele.push_back(c - '0');
+					//									genotypes[j*nfound*2+2*fi+ii]=nuc[c - '0'];
+				}
+				else {
+					fprintf(stderr,"Error in reading genotype\n");
+					exit(1);
+				}
+			}
+			genotypes.push_back(genotype);
+		}
+		else {
+			sscanf(line,"\t%*s%[^\n]",tmpline);
+		}
+		strcpy(line,tmpline);
+	}
+	free(line);
+	free(tmpline);
+	return genotypes;
+}
+
+GenotypesA gengenotypes(int pos, int ni,int *sex,const char *linein)
+{
+	int i,j,a1,a2,found;
+	char *line = (char*)calloc(strlen(linein)+1,sizeof(char));
+	char *tmpline = (char*)calloc(strlen(linein)+1,sizeof(char));
+	char n1,n2;
 	double proba;
 	
-	std::vector<Genotype> genotypes;
+	GenotypesA genotypes;
+	genotypes.position=pos;
 	strcpy(line,linein);
+//	printf("position %d\n",pos);
 
 	sscanf(line,"%*d%[^\n]",tmpline);
 	strcpy(line,tmpline);
 	for (i=0; i<ni; i++){
 		if (sex[i]>=0) {
-			Genotype genotype;
-			sscanf(line,"\t%c%c|%lf%[^\n]",&nuc1,&nuc2,&proba,tmpline);
-			genotype.nucleotides[0]=nuc1;
-			genotype.nucleotides[1]=nuc2;
+			GenotypeA genotype;
+			sscanf(line,"\t%c%c|%lf%[^\n]",&n1,&n2,&proba,tmpline);
+//			printf("individual %d: %c%c\n",i,n1,n2);
+			std::string nuc1,nuc2;
+			nuc1.push_back(n1);
+			nuc2.push_back(n2);
+			found=0;
+			for(j=0;j<genotypes.alleles.size();j++){
+				if(nuc1==genotypes.alleles[j].data()){
+					a1=j;
+					found=1;
+				}
+			}
+			if(found==0){
+				if(nuc1=="N"){
+					a1=-1;
+				}
+				else {
+//					printf("New allele: %s\n",nuc1.data());
+					genotypes.alleles.push_back(nuc1);
+					a1=genotypes.alleles.size()-1;
+				}
+			}
+			found=0;
+			for(j=0;j<genotypes.alleles.size();j++){
+				if(nuc2==genotypes.alleles[j].data()){
+					a2=j;
+					found=1;
+				}
+			}
+			if(found==0){
+				if(nuc2=="N"){
+					a2=-1;
+				}
+				else {
+//					printf("New allele: %s\n",nuc2.data());
+					genotypes.alleles.push_back(nuc2);
+					a2=genotypes.alleles.size()-1;
+				}
+			}
+			
+			genotype.allele.push_back(a1);
+			genotype.allele.push_back(a2);
 			genotype.probability=proba;
-			genotypes.push_back(genotype);
+			genotypes.individualgenotypes.push_back(genotype);
 		}
 		else {
 			sscanf(line,"\t%*c%*c|%*f%[^\n]",tmpline);

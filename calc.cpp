@@ -53,7 +53,7 @@ double* errormult(double ematrix[3][3], double x[3]) {
 	return vector;
 }
 
-void CondSiteProbs(std::vector<Contig>& contigs, const Model model, double Q[3][3], double *****P, long double ***condsiteprob)
+void CondSiteProbs(std::vector<ContigA>& contigs, const Model model, double Q[3][3], double *****P, long double ***condsiteprob)
 {
 	int k,t,jl,s,g,gp;
 //	unsigned int *nmulti;
@@ -61,8 +61,8 @@ void CondSiteProbs(std::vector<Contig>& contigs, const Model model, double Q[3][
 	double tempgp;
 	
 	for (k=0;k<contigs.size();k++) {
-		Contig & current_contig = contigs[k];
-		for(t=0;t<current_contig.snps.size();t++){
+		ContigA & current_contig = contigs[k];
+		for(t=0;t<current_contig.varsites.size();t++){
 			foreach_jl(model,[&](const auto jl){
 			//for(jl=0;jl<JLTYPES;jl++) {
 				//				nmulti=vectorize_ui(polysite[k][t][N11F],polysite[k][t][N12F],polysite[k][t][N22F]);
@@ -84,15 +84,15 @@ void CondSiteProbs(std::vector<Contig>& contigs, const Model model, double Q[3][
 						for(gp=0;gp<3;gp++){
 							tempgp+=P[k][t][s][jl][gp]*Q[g][gp];
 						}
-						condsiteprob[k][t][jl]*=intpow(tempgp,current_contig.snps[t].genotypes_by_sex[g+3*s]);
+						condsiteprob[k][t][jl]*=intpow(tempgp,current_contig.varsites[t].genotypes_by_sex[g+3*s]);
 					}
 				}
 				if(isnan(condsiteprob[k][t][jl])){
-					fprintf(stdout,"NaN produced (CondSiteProbs): contig %d, site %d, type %d: %Lf\n",k,current_contig.snps[t].position,jl,condsiteprob[k][t][jl]);
+					fprintf(stdout,"NaN produced (CondSiteProbs): contig %d, site %d, type %d: %Lf\n",k,current_contig.varsites[t].position,jl,condsiteprob[k][t][jl]);
 					exit(1);
 				}
 				else if(isinf(condsiteprob[k][t][jl])){
-					fprintf(stdout,"Inf produced (CondSiteProbs): contig %d, site %d, type %d: %Lf\n",k,current_contig.snps[t].position,jl,condsiteprob[k][t][jl]);
+					fprintf(stdout,"Inf produced (CondSiteProbs): contig %d, site %d, type %d: %Lf\n",k,current_contig.varsites[t].position,jl,condsiteprob[k][t][jl]);
 					for(s=0;s<2;s++){
 						fprintf(stdout,"s=%d\n",s);
 						for(g=0;g<3;g++){
@@ -108,13 +108,13 @@ void CondSiteProbs(std::vector<Contig>& contigs, const Model model, double Q[3][
 	}
 }
 
-void CondSegProbs(std::vector<Contig>& contigs, const Model model, double **rho, long double ***condsiteprob, long double ***condsegprob)
+void CondSegProbs(std::vector<ContigA>& contigs, const Model model, double **rho, long double ***condsiteprob, long double ***condsegprob)
 {
 	int k,t,l,j;
 	
 	for (k=0;k<contigs.size();k++) {
-		Contig & current_contig = contigs[k];
-		for(t=0;t<current_contig.snps.size();t++){
+		ContigA & current_contig = contigs[k];
+		for(t=0;t<current_contig.varsites.size();t++){
 			foreach_j(model,[&](const auto j){
 					if(j==J_AUTO){
 						condsegprob[k][t][j]=condsiteprob[k][t][JL_AUTO];

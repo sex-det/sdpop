@@ -55,16 +55,15 @@ char **parsenames(char *string,int *nind,int maxlength) {
 	return names;
 }
 
-Contig polyfilter2(ContigGenotypes contiggenotypes, int *n3, int *n4, double *theta, int *ninformation, double *errorrate) {//number of positions and individuals,
+ContigA polyfilter2(ContigGenotypesA contiggenotypes, int *n3, int *n4, double *theta, int *ninformation, double *errorrate) {//number of positions and individuals,
 	// genotype matrix, pointer to the number of polymorphic sites
 	// function treats one contig
-	char nucvec[4] = {0};
-	int i,j,ii,randbit;
-	int div,n11f,n12f,n22f,n11m,n12m,n22m,nA,nT,nG,nC,nN;
-	char pos1,pos2,nuc1,nuc2;
-	int n,n2,nt,nf,npos,nind,nsnind;
+	int i,j,ii/*,randbit*/;
+	int div,n11f,n12f,n22f,n11m,n12m,n22m;
+	int pos1,pos2;
+	int n,n2,nt,nf,npos,nind,nsnind,amax;
 	double a,error;
-	Contig contig;
+	ContigA contig;
 	
 	contig.name=contiggenotypes.name;
 	
@@ -79,59 +78,31 @@ Contig polyfilter2(ContigGenotypes contiggenotypes, int *n3, int *n4, double *th
 	nsnind=0;
 	error=0.;
 	for (j=0; j<npos; j++){
-		//count the number of alleles : A, T, G, C, N
-		nA=nT=nG=nC=nN=0;
-		for (i=0; i<nind; i++){ //loop through all chromosomes
-//			if (contiggenotypes.genotypes[j].individualgenotypes[i].nucleotides[0] != 'N' && contiggenotypes.genotypes[j].individualgenotypes[i].nucleotides[1] != 'N'){
-//				nsnind++;
-//				error+=1.-contiggenotypes.genotypes[j].individualgenotypes[i].probability;
-//			}
+		amax=-1;
+		for (i=0; i<nind; i++){ //find maximum allele number
 			for (ii=0; ii<2; ii++){
-				switch (contiggenotypes.genotypes[j].individualgenotypes[i].nucleotides[ii]) {
-				case 'A' :
-					nA++;
-					break;
-				case 'T' :
-					nT++;
-					break;
-				case 'G' :
-					nG++;
-					break;
-				case 'C' :
-					nC++;
-					break;
-				case 'n' :
-				case 'N' :
-					nN++;
-					break;
-				default :
-					fprintf(stderr,"Error in parsing genotypes at position %d of contig %s\n",contiggenotypes.genotypes[j].position,contiggenotypes.name.data());
-					fprintf(stderr,"allowed are only A, T, G, C, and N (or n).\n");
-					fprintf(stderr,"Found %c instead\n",contiggenotypes.genotypes[j].individualgenotypes[i].nucleotides[ii]);
-					exit(1);
+				if(contiggenotypes.genotypes[j].individualgenotypes[i].allele[ii]>amax){
+					amax=contiggenotypes.genotypes[j].individualgenotypes[i].allele[ii];
+				}
+			}
+		}
+		int allelecount[amax+1] = {0};
+		//count the number of alleles
+		for (i=0; i<nind; i++){ //loop through all chromosomes
+			for (ii=0; ii<2; ii++){
+				if(contiggenotypes.genotypes[j].individualgenotypes[i].allele[ii]>=0){
+					(allelecount[contiggenotypes.genotypes[j].individualgenotypes[i].allele[ii]])++;
 				}
 			}
 		}
 		div=0;
-		memset(nucvec, 0, strlen(nucvec)*(sizeof nucvec));
+		for(i=0;i<=amax;i++){
+			if(allelecount[i]>0){
+				div++;
+			}
+		}
 		n11f=n22f=n12f=0;
 		n11m=n22m=n12m=0;
-		if (nA>0) {
-			nucvec[div]='A';
-			div++;
-		}
-		if (nT>0) {
-			nucvec[div]='T';
-			div++;
-		}
-		if (nG>0) {
-			nucvec[div]='G';
-			div++;
-		}
-		if (nC>0) {
-			nucvec[div]='C';
-			div++;
-		}
 		if (div > 1) {
 			a=1.;
 			for (i=2; i<2*nind; i++){
@@ -139,44 +110,42 @@ Contig polyfilter2(ContigGenotypes contiggenotypes, int *n3, int *n4, double *th
 			}
 			*theta+=1./a;
 		}
-		if (div == 1) { //no polymorphism
-			nuc1=nucvec[0];
+		if (div == 2) { //simple polymorphism
 			for (i=0; i<nind; i++){ //loop through all chromosomes
-				pos1=contiggenotypes.genotypes[j].individualgenotypes[i].nucleotides[0];
-				pos2=contiggenotypes.genotypes[j].individualgenotypes[i].nucleotides[1];
-				if (contiggenotypes.individuals[i].sex==FEMALE) {
-					if (pos1 == pos2 && pos1 == nucvec[0]) { //homozygous
-						n11f++;
-					}
-				}
-				else if (contiggenotypes.individuals[i].sex==MALE) {
-					if (pos1 == pos2 && pos1 == nucvec[0]) { //homozygous
-						n11m++;
-					}
-				}
-			}
-		}
-		else if (div == 2) { //simple polymorphism
-			for (i=0; i<nind; i++){ //loop through all chromosomes
-				if (contiggenotypes.genotypes[j].individualgenotypes[i].nucleotides[0] != 'N' && contiggenotypes.genotypes[j].individualgenotypes[i].nucleotides[1] != 'N'){
+				if (contiggenotypes.genotypes[j].individualgenotypes[i].allele[0] >= 0 && contiggenotypes.genotypes[j].individualgenotypes[i].allele[1] >= 0){
 					nsnind++;
 					error+=1.-contiggenotypes.genotypes[j].individualgenotypes[i].probability;
 				}
 			}
-			//randomize 
-			nuc1=nucvec[0];
-			nuc2=nucvec[1];
-			randbit=rand()%2;
-			nucvec[randbit]=nuc1;
-			nucvec[!randbit]=nuc2;
+			//find which alleles are present
+			std::vector<std::string> alleles;
+			int allelei[2];
+			ii=0;
+			for(i=0;i<=amax;i++){
+				if(allelecount[i]>0){
+					if(ii>=2){
+						fprintf(stderr,"Error: expected 2 alleles, found %d (position %d, contig %s)\n",ii,contiggenotypes.genotypes[j].position,contiggenotypes.name.data());
+						exit(1);			
+					}
+					allelei[ii]=i;
+					alleles.push_back(contiggenotypes.genotypes[j].alleles[i]);
+					ii++;
+				}
+			}
+			if(ii!=2){
+				fprintf(stderr,"Error: expected 2 alleles, found %d (position %d, contig %s)\n",ii,contiggenotypes.genotypes[j].position,contiggenotypes.name.data());
+				exit(1);			
+			}
+
+			//code genotypes
 			for (i=0; i<nind; i++){ //loop through all chromosomes
-				pos1=contiggenotypes.genotypes[j].individualgenotypes[i].nucleotides[0];
-				pos2=contiggenotypes.genotypes[j].individualgenotypes[i].nucleotides[1];
+				pos1=contiggenotypes.genotypes[j].individualgenotypes[i].allele[0];
+				pos2=contiggenotypes.genotypes[j].individualgenotypes[i].allele[1];
 				if (contiggenotypes.individuals[i].sex==FEMALE) {
-					if (pos1 == pos2 && pos1 == nucvec[0]) { //homozygous
+					if (pos1 == pos2 && pos1 == allelei[0]) { //homozygous
 						n11f++;
 					}
-					else if (pos1 == pos2 && pos1 == nucvec[1]) { //homozygous
+					else if (pos1 == pos2 && pos1 == allelei[1]) { //homozygous
 						n22f++;
 					}
 					else if (pos1 != pos2) { //heterozygous
@@ -184,10 +153,10 @@ Contig polyfilter2(ContigGenotypes contiggenotypes, int *n3, int *n4, double *th
 					}
 				}
 				else if (contiggenotypes.individuals[i].sex==MALE) {
-					if (pos1 == pos2 && pos1 == nucvec[0]) { //homozygous
+					if (pos1 == pos2 && pos1 == allelei[0]) { //homozygous
 						n11m++;
 					}
-					else if (pos1 == pos2 && pos1 == nucvec[1]) { //homozygous
+					else if (pos1 == pos2 && pos1 == allelei[1]) { //homozygous
 						n22m++;
 					}
 					else if (pos1 != pos2) { //heterozygous
@@ -195,45 +164,37 @@ Contig polyfilter2(ContigGenotypes contiggenotypes, int *n3, int *n4, double *th
 					}
 				}
 			}
+			n2++;
+			if(n11m+n22m+n12m == 0 || n11f+n22f+n12f == 0){ //if we only have data on one sex, don't consider the site
+				div=-1;
+				continue;
+			}		
+			Varsite tempvarsite;
+			tempvarsite.position=contiggenotypes.genotypes[j].position; //position
+			tempvarsite.genotypes_by_sex[N11F]=n11f; //female counts
+			tempvarsite.genotypes_by_sex[N12F]=n12f; 
+			tempvarsite.genotypes_by_sex[N22F]=n22f; 			
+			tempvarsite.genotypes_by_sex[N11M]=n11m; //male counts
+			tempvarsite.genotypes_by_sex[N12M]=n12m; 
+			tempvarsite.genotypes_by_sex[N22M]=n22m; 	
+			tempvarsite.alleles.push_back(alleles[0].data());
+			tempvarsite.alleles.push_back(alleles[1].data());
+			contig.varsites.push_back(tempvarsite);
+			n++;
+
 		}
-//			printf("%d\t%d\t%d\t%d\t%d\t%d\n",n11f,n12f,n22f,n11m,n12m,n22m);
+//			printf("%d\t%d\t%d\t%d\t%d\t%d %d\n",n11f,n12f,n22f,n11m,n12m,n22m,nind);
 //			if(n22m+n12m == 0 && n22f+n12f == 0){ //are the polymorphisms in the individuals we study ?
 //				div=-1;
 //			}				
 //			if(n11m+n12m == 0 && n11f+n12f == 0){ 
 //				div=-1;
 //			}
-			if(div == 2) {
-				n2++;
-			}
-			if(n11m+n22m+n12m == 0 || n11f+n22f+n12f == 0){ //if we only have data on one sex, don't consider the site
-				div=-1;
-			}				
 		else if (div ==3) {
 			nt++;
 		}
 		else if (div ==4) {
 			nf++;
-		}
-//		if (div == 1 || div == 2 ) {
-		if (div == 2 ) {
-			SNP tempsnp;
-			tempsnp.position=contiggenotypes.genotypes[j].position; //position
-			tempsnp.genotypes_by_sex[N11F]=n11f; //female counts
-			tempsnp.genotypes_by_sex[N12F]=n12f; 
-			tempsnp.genotypes_by_sex[N22F]=n22f; 			
-			tempsnp.genotypes_by_sex[N11M]=n11m; //male counts
-			tempsnp.genotypes_by_sex[N12M]=n12m; 
-			tempsnp.genotypes_by_sex[N22M]=n22m; 	
-			tempsnp.alleles[0]=DNA2int(nucvec[0]);
-			if (div == 2 ) {
-				tempsnp.alleles[1]=DNA2int(nucvec[1]);
-			}
-			else if (div == 1 ) {
-				tempsnp.alleles[1]=DNA2int(nucvec[0]);
-			}
-			contig.snps.push_back(tempsnp);
-			n++;
 		}
 	}
 	*n3=nt;
@@ -249,31 +210,31 @@ Contig polyfilter2(ContigGenotypes contiggenotypes, int *n3, int *n4, double *th
 	return contig;
 }
 
-Contig polyfilter(ContigGenotypes contiggenotypes, int *n3, int *n4, double *theta) {//number of positions and individuals,
+ContigA polyfilter(ContigGenotypesA contiggenotypes, int *n3, int *n4, double *theta) {//number of positions and individuals,
 	int ninformation;
 	double errorrate;
 	return polyfilter2(contiggenotypes,n3,n4,theta,&ninformation,&errorrate);
 }
 
-void write_contig2(FILE *outfile, Contig contig, int n3, int n4, double theta, int ninformation, double errorrate)
+void write_contig2(FILE *outfile, ContigA contig, int n3, int n4, double theta, int ninformation, double errorrate)
 {
 	int t,i;
 	int npolysites;
-	npolysites=contig.snps.size();
+	npolysites=contig.varsites.size();
 	fprintf(outfile,">%s\t%d\t%d\t%d\t%f\t%d\t%f\n",contig.name.data(),npolysites,n3,n4,theta,ninformation,errorrate);
 	if(npolysites>0) {
 		for (t=0; t<npolysites; t++){
-			fprintf(outfile,"%d\t",contig.snps[t].position);
-			fprintf(outfile,"%c%c\t",int2DNA(contig.snps[t].alleles[0]),int2DNA(contig.snps[t].alleles[1]));
+			fprintf(outfile,"%d\t",contig.varsites[t].position);
+			fprintf(outfile,"%s,%s\t",contig.varsites[t].alleles[0].data(),contig.varsites[t].alleles[1].data());
 			for (i=0; i<6; i++) {
-				fprintf(outfile,"%d\t",contig.snps[t].genotypes_by_sex[i]);
+				fprintf(outfile,"%d\t",contig.varsites[t].genotypes_by_sex[i]);
 			}
 			fprintf(outfile,"\n");
 		}
 	}
 }
 
-void write_contig(FILE *outfile, Contig contig, int n3, int n4, double theta)
+void write_contig(FILE *outfile, ContigA contig, int n3, int n4, double theta)
 {
 	write_contig2(outfile, contig, n3, n4, theta, 0, 0);
 }
@@ -368,7 +329,7 @@ int main(int argc, char *argv[])
 	fprintf(stdout,"Reading data...\n");
 	
 	if(datafmt==READS2SNP) {
-		ContigGenotypes contiggenotypes;
+		ContigGenotypesA contiggenotypes;
 		totalinformation=0;
 		totalerror=0.;
 		
@@ -387,13 +348,13 @@ int main(int argc, char *argv[])
 			if ( strncmp(line.data(),">",1)==0){
 				if (firstcontig==0) {	//Filtering polymorphisms for the last read contig
 					nJ=pos;
-					Contig contig=polyfilter2(contiggenotypes,&n3,&n4,&theta,&ninformation,&errorrate);
+					ContigA contig=polyfilter2(contiggenotypes,&n3,&n4,&theta,&ninformation,&errorrate);
 					totalinformation+=ninformation;
 					totalerror+=ninformation*errorrate;
 					contiggenotypes.individuals.clear();
 					contiggenotypes.genotypes.clear();
 					write_contig2(outfile,contig,n3,n4,theta,ninformation,errorrate);
-					totsites+=contig.snps.size();
+					totsites+=contig.varsites.size();
 					free(sex);
 					free(foundsex);
 					for (i=0; i < ni; i++){
@@ -475,21 +436,18 @@ int main(int argc, char *argv[])
 //					fprintf(stderr,"read \"%s\" instead\n",line.data());
 //					exit(1);
 //				}
-				Genotypes tempgenotypes;
-				tempgenotypes.position=pos;
-				tempgenotypes.individualgenotypes=gengenotypes(ni,sex,line.data());
-				contiggenotypes.genotypes.push_back(tempgenotypes);
+				contiggenotypes.genotypes.push_back(gengenotypes(pos,ni,sex,line.data()));
 				
 				j++;
 				
 			}
 		}
 		nJ=j;
-		Contig contig=polyfilter2(contiggenotypes,&n3,&n4,&theta,&ninformation,&errorrate);
+		ContigA contig=polyfilter2(contiggenotypes,&n3,&n4,&theta,&ninformation,&errorrate);
 		totalinformation+=ninformation;
 		totalerror+=ninformation*errorrate;
 		write_contig2(outfile,contig,n3,n4,theta,ninformation,errorrate);
-		totsites+=contig.snps.size();
+		totsites+=contig.varsites.size();
 		free(sex);
 		free(foundsex);
 		for (i=0; i < ni; i++){
@@ -517,7 +475,7 @@ int main(int argc, char *argv[])
 	}
 	else if (datafmt==VCF){
 		
-		ContigGenotypes contiggenotypes;
+		ContigGenotypesA contiggenotypes;
 		k=0;
 		l=0; //line number
 		
@@ -592,19 +550,16 @@ int main(int argc, char *argv[])
 			else if (strncmp(line.data(),"##",2)!=0) { //line contains genotype data
 				sscanf(line.data(),"%s\t%d",chrom,&chrpos);
 				if(strcmp(chrom,contiggenotypes.name.data())==0){ //still the same contig as before
-					
-					val=vcfsnp(line.data(),nuc,&nnuc);
-					if(val==-1){
-						fprintf(stderr,"Error occurred while reading line %d\n",l);
-						exit(1);
-					}
-					else if (val==1) {
+					std::vector<std::string> alleles;
+					alleles=vcfsnpindel(line.data());
+					if (alleles.size()==1) {
 						continue;
 					}
 										
-					//here, we are sure it's a SNP. nnuc is the number of observed nucleotides
-					Genotypes tempgenotypes;
+					//here, we are sure it's a SNP
+					GenotypesA tempgenotypes;
 					tempgenotypes.position=chrpos;
+					tempgenotypes.alleles=alleles;
 					if(randomise){ //Fisher-Yates shuffling
 						for (i=0;i<ni-1;i++) {
 							if(sex[i]>=0){
@@ -616,7 +571,7 @@ int main(int argc, char *argv[])
 							}
 						}
 					}
-					tempgenotypes.individualgenotypes=vcfgenotypes(ni,sex,line.data(),nuc,maxnuc);
+					tempgenotypes.individualgenotypes=vcfalleles(ni,sex,line.data());
 					contiggenotypes.genotypes.push_back(tempgenotypes);
 					j++;				
 				}
@@ -626,10 +581,10 @@ int main(int argc, char *argv[])
 						fprintf(stdout,"Treating contig %s...\n",contiggenotypes.name.data());
 						nJ=j;
 						if(nJ>0){
-						Contig contig=polyfilter(contiggenotypes,&n3,&n4,&theta);
+						ContigA contig=polyfilter(contiggenotypes,&n3,&n4,&theta);
 							contiggenotypes.genotypes.clear();
 							write_contig(outfile,contig,n3,n4,theta);
-							totsites+=contig.snps.size();
+							totsites+=contig.varsites.size();
 						}
 						k++;
 					}
@@ -640,19 +595,28 @@ int main(int argc, char *argv[])
 					
 					//read first line
 					
-					val=vcfsnp(line.data(),nuc,&nnuc);
-					if(val==-1){
-						fprintf(stderr,"Error occurred while reading line %d\n",l);
-						exit(52);
-					}
-					else if (val==1) {
+					std::vector<std::string> alleles;
+					alleles=vcfsnpindel(line.data());
+					if (alleles.size()==1) {
 						continue;
 					}
-					//here, we are sure it's a SNP. nnuc is the number of observed nucleotides
-
-					Genotypes tempgenotypes;
+										
+					//here, we are sure it's a SNP
+					GenotypesA tempgenotypes;
 					tempgenotypes.position=chrpos;
-					tempgenotypes.individualgenotypes=vcfgenotypes(ni,sex,line.data(),nuc,maxnuc);
+					tempgenotypes.alleles=alleles;
+					if(randomise){ //Fisher-Yates shuffling
+						for (i=0;i<ni-1;i++) {
+							if(sex[i]>=0){
+							while(sex[ri=i+rand()/(RAND_MAX/(ni-i)+1)]<0){
+							}
+							tempsex=sex[i];
+							sex[i]=sex[ri];
+							sex[ri]=tempsex;
+							}
+						}
+					}
+					tempgenotypes.individualgenotypes=vcfalleles(ni,sex,line.data());
 					contiggenotypes.genotypes.push_back(tempgenotypes);
 					j++;				
 				}
@@ -662,10 +626,11 @@ int main(int argc, char *argv[])
 		nJ=j;
 		
 		//Filtering polymorphisms for the last contig	
+		fprintf(stdout,"Treating contig %s...\n",contiggenotypes.name.data());
 		if(nJ>0){
-			Contig contig=polyfilter(contiggenotypes,&n3,&n4,&theta);
+			ContigA contig=polyfilter(contiggenotypes,&n3,&n4,&theta);
 			write_contig(outfile,contig,n3,n4,theta);
-			totsites+=contig.snps.size();
+			totsites+=contig.varsites.size();
 		}
 		ncontigs=k+1;
 		fprintf(stdout,"Read %d contigs and %d polymorphic sites\n",ncontigs,totsites);	

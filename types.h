@@ -35,10 +35,27 @@ struct Genotypes {
 	std::vector<Genotype> individualgenotypes;
 };
 
+struct GenotypeA {
+	std::vector<int> allele;
+	double probability;
+};
+
+struct GenotypesA {
+	int position;
+	std::vector<std::string> alleles;
+	std::vector<GenotypeA> individualgenotypes;
+};
+
 struct ContigGenotypes {
 	std::string name;
 	std::vector<Individual> individuals;
 	std::vector<Genotypes> genotypes;
+};
+
+struct ContigGenotypesA {
+	std::string name;
+	std::vector<Individual> individuals;
+	std::vector<GenotypesA> genotypes;
 };
 
 struct Model {
@@ -46,4 +63,16 @@ struct Model {
 	int paralogs;
 	int xy;
 	int zw;
+};
+
+struct Varsite {
+	int position;
+	int genotypes_by_sex[_GenotypeCountsSize]; //size of enum GenotypeCounts
+	std::vector<std::string> alleles;
+};
+
+struct ContigA {
+	std::string name;
+	double coverage;
+	std::vector<Varsite> varsites; //number of snps
 };
