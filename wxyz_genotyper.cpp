@@ -248,19 +248,15 @@ int main(int argc, char *argv[])
 {
 	FILE *sdpfile,*genfile,*outfile;
 	int CUR_MAX = 4095;
-	int NCONTIG_BATCH = 100;
-	int ncontigs_allocated;
 	char *line = (char *)calloc((size_t)CUR_MAX,sizeof(char));
 	char *tmpline = (char *)calloc((size_t)CUR_MAX,sizeof(char));
 	char ch='a',gencontig[NAME_LEN],tcont[NAME_LEN],word[NAME_LEN],chrom[NAME_LEN],oldchrom[NAME_LEN],**name;
-	int npolysites,toread=0,ncontigs,ngencontigs,sites_allocated;
+	int npolysites,toread=0,ncontigs,ngencontigs;
 	double pp,contigthreshold,sitethreshold1,sitethreshold2;
 	char nuc1[NAME_LEN],nuc2[NAME_LEN];
-	int i,j,k,l,s,t,found,pos,nacgt[5],div,nextpos,x,ni,chrpos,ii;
-	int count,length,SNP,fixed,ns,ff[2],xy,nwords,posterior_field,mean;
-	int Xref,Yref,amax,*sex;
-	double pi_X,pi_Y,divergence;	
-	char refallele;
+	int i,j,k,l,t,found,pos,ni,chrpos;
+	int count,length,ff[2],xy,nwords,posterior_field,mean;
+	int *sex;
 	int datafmt=1;
 	int READS2SNP=0;
 	int VCF=1;
@@ -540,7 +536,8 @@ int main(int argc, char *argv[])
 
 	if(ncontigs>0){
 		fprintf(stdout,"Reading data from file %s...\n",argv[2]);
-		/*if(datafmt==READS2SNP){
+		if(datafmt==READS2SNP){
+			ContigGenotypesA contiggenotypes;
 			ch='a';
 			l=0;
 			found=-1;
@@ -570,157 +567,50 @@ int main(int argc, char *argv[])
 				l++;
 				if ( line[0] == '>'){
 					if(found>=0){ // print last sequences
-						outfunction(outfile,&contig[k*NAME_LEN],s,t,fixed,ns,pi_X,pi_Y,divergence,sequenceX,sequenceY);
+						treat_and_output(contiggenotypes,contigs[found],f[found],sitethreshold1,sitethreshold2,outfile);
+						free(name);
+						free(sex);
 					}
 					sscanf(line,">%s",gencontig);
 					found=-1;
 					for(k=0;k<ncontigs;k++){
-						if(strcmp(gencontig,&contig[k*NAME_LEN])==0){
+						if(strcmp(gencontig,contigs[k].name.data())==0){
 							found=k;
-							t=0;
-							s=0;
-							ns=0;
-							fixed=0;
 							ngencontigs+=1;
-							sites_allocated=2*polysite[k][(npolysites[k]-1)][0];
-							if((sequenceX=(char *)malloc(sizeof(char)*(sites_allocated+1)))==NULL){
-								fprintf(stderr,"error in memory allocation\n");
-								exit(1);
-							}				
-							if((sequenceY=(char *)malloc(sizeof(char)*(sites_allocated+1)))==NULL){
-								fprintf(stderr,"error in memory allocation\n");
-								exit(1);
-							}
-							pi_X=0;
-							pi_Y=0;
-							divergence=0;
+							contiggenotypes.individuals.clear();								
+							contiggenotypes.genotypes.clear();								
 							break;
 						}
 					}
 				}
-				else if ( line[0] != 'p' && found>=0 ){
-					if(s==sites_allocated){ //time to expand
-						sites_allocated+=npolysites[found];
-						if((sequenceX=(char *)realloc(sequenceX,sizeof(char)*(sites_allocated+1)))==NULL){
-							fprintf(stderr,"error in memory allocation (realloc)\n");
-							exit(1);
-						}
-						if((sequenceY=(char *)realloc(sequenceY,sizeof(char)*(sites_allocated+1)))==NULL){
-							fprintf(stderr,"error in memory allocation (realloc)\n");
-							exit(1);
-						}				
+				else if ( line[0] == 'p' && found>=0){
+					name=getgennames(line, &ni); //returns all names present in line, and the number of names ni
+					if((sex=(int *)calloc((size_t)(ni),sizeof(int)))==NULL) { 
+						fprintf(stderr,"error in memory allocation\n");
+						exit(1);
 					}
-					sscanf(line,"%d%[^\n]",&pos,tmpline);
-					strcpy(line,tmpline);
-					//			if(pos!=s+1){
-					//				fprintf(stderr,"Error in input file line number %d: expecting to read \"%d ...\"\n",l,s+1);
-					//				fprintf(stderr,"read \"%s\" instead\n",line);
-					//				exit(1);
-					//			}
-					if(t<npolysites[k]) {
-						if(pos==polysite[k][t][0]) { //a SNP, and we know the genotype
-							SNP=1;
-						}
-						else {
-							SNP=0;
-						}
-					}
-					else {
-						SNP=0;
+					for(i=0;i<ni;i++){
+						sex[i]=1; //use all individuals
+						Individual tmpindividual;
+						tmpindividual.name=name[i];
+						tmpindividual.sex=sex[i];
+						contiggenotypes.individuals.push_back(tmpindividual);
 					}
 					
-					if(SNP==1){
-						ns++;
-						if(f[k][t][0]>=sitethreshold1){
-							sequenceX[s]=toupper(nuc[k][t][0]);
-						}
-						else if(f[k][t][0]>=sitethreshold2){
-							sequenceX[s]=tolower(nuc[k][t][0]);
-						}
-						else if(f[k][t][0]<=1-sitethreshold1){
-							sequenceX[s]=toupper(nuc[k][t][1]);
-						}
-						else if(f[k][t][0]<=1-sitethreshold2){
-							sequenceX[s]=tolower(nuc[k][t][1]);
-						}
-						else {
-							sequenceX[s]='n';
-						}
-						if(f[k][t][1]>=sitethreshold1){
-							sequenceY[s]=toupper(nuc[k][t][0]);
-						}
-						else if(f[k][t][1]>=sitethreshold2){
-							sequenceY[s]=tolower(nuc[k][t][0]);
-						}
-						else if(f[k][t][1]<=1-sitethreshold1){
-							sequenceY[s]=toupper(nuc[k][t][1]);
-						}
-						else if(f[k][t][1]<=1-sitethreshold2){
-							sequenceY[s]=tolower(nuc[k][t][1]);
-						}
-						else {
-							sequenceY[s]='n';
-						}
-						pi_X+=2*f[k][t][0]*(1.-f[k][t][0]);
-						pi_Y+=2*f[k][t][1]*(1.-f[k][t][1]);
-						divergence+=f[k][t][0]*(1.-f[k][t][1])+f[k][t][1]*(1.-f[k][t][0]);
-						//				if( (f[k][t][0]>=sitethreshold1 || f[k][t][0]<=1-sitethreshold1) && (f[k][t][1]>=sitethreshold1 || f[k][t][1]<=1-sitethreshold1) ){
-						if( (f[k][t][0]>=sitethreshold1 && f[k][t][1]<=1-sitethreshold1) || (f[k][t][1]>=sitethreshold1 && f[k][t][0]<=1-sitethreshold1) ){
-							fixed++;
-						}
-						t++;
-					}
-					else{ //not a SNP : find nucleotide in genotype file
-						for(i=0;i<5;i++){
-							nacgt[i]=0;
-						}
-						j=0;
-						//				printf("%s\n",line);
-						nextpos=0;
-						while(strlen(line)-nextpos>3){
-							sscanf(line + nextpos,"\t%c%c|%*f%n",&nuc1,&nuc2,&x);
-							//					strcpy(line,tmpline);
-							//					printf("%d\t%s\t%c%c\n",nextpos,&line[nextpos],nuc1,nuc2);
-							nacgt[DNA2int(nuc1)]++;
-							nacgt[DNA2int(nuc2)]++;
-							j++;
-							nextpos+=x;
-						}
-						if(nacgt[0]==2*j){ //N
-							sequenceX[s]='N';
-							sequenceY[s]='N';
-						}
-						else {
-							ns++;
-							div=0;
-							for(i=1;i<5;i++){
-								if(nacgt[i]>0){
-									div++;
-								}
-							}
-							if(div==1){
-								for(i=1;i<5;i++){
-									if(nacgt[i]>0){
-										sequenceX[s]=int2DNA(i);
-										sequenceY[s]=int2DNA(i);
-										break;
-									}
-								}
-							}
-							else { //if there is some polymorphism that has passed unnoticed...
-								sequenceX[s]='X';
-								sequenceY[s]='X';
-							}
-						}
-					}
-					s++;
+				}
+
+				else if ( line[0] != 'p' && found>=0 ){
+					sscanf(line,"%d",&pos);
+					contiggenotypes.genotypes.push_back(gengenotypes(pos,ni,sex,line));
 				}
 			}
 			if(found>=0){ // print last sequences
-				outfunction(outfile,&contig[k*NAME_LEN],s,t,fixed,ns,pi_X,pi_Y,divergence,sequenceX,sequenceY);
+				treat_and_output(contiggenotypes,contigs[found],f[found],sitethreshold1,sitethreshold2,outfile);
+				free(name);
+				free(sex);
 			}
 		}
-		else if (datafmt==FASTA){
+/*		else if (datafmt==FASTA){
 			ch='a';
 			l=0;
 			found=-1;
@@ -872,8 +762,8 @@ int main(int argc, char *argv[])
 					}
 				}
 			}
-		}		
-		else*/ if (datafmt==VCF){
+		}*/		
+		else if (datafmt==VCF){
 			ContigGenotypesA contiggenotypes;
 			ch='a';
 			l=0;
