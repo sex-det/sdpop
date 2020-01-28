@@ -3,8 +3,8 @@ reading.o: reading.cpp reading.h types.h
 calc.o: calc.cpp calc.h types.h
 	$(CXX) -Wall -c calc.cpp
 
-sdpop_2018: sdpop_2018.cpp reading.o calc.o types.h
-	$(CXX) -Wall -o sdpop_2018 -lm reading.o calc.o sdpop_2018.cpp
+sdpop: sdpop.cpp reading.o calc.o types.h
+	$(CXX) -Wall -o sdpop -lm reading.o calc.o sdpop.cpp
 popsum: popsum.cpp reading.o types.h
 	$(CXX) -Wall -o popsum -lm reading.o popsum.cpp
 wxyz_genotyper: wxyz_genotyper.cpp reading.o calc.o types.h
