@@ -737,7 +737,7 @@ int main(int argc, char *argv[]) {
 	double sumET,weights;     
 	double dumpi[JTYPES],pi[JTYPES],**rho,oldpi[JTYPES],**oldrho,sumpi,sumrho;
 	long double pidelta[JTYPES],**rhodelta,deltamax;
-	int mode=CONTIG,errormodel=ERRORS,plateausteps,nnoncontigs;
+	int errormodel=ERRORS,plateausteps,nnoncontigs;
 	double stop=0.0001; //relative difference between parameter values used to signal convergence
 	double noconv=0.00001; //if a parameter value is below this value, stop evaluating its contribution to convergence
 	double minimumvalue=1e-10; //if a parameter value falls below this value, stop evaluating its optimisation
@@ -745,12 +745,12 @@ int main(int argc, char *argv[]) {
 	double maxl,sumgp;
 	long double temp[JTYPES],templ[LTYPES],maxgp,sumL;
 	double pmax,gmax,rmax,fx,fy;
-	int	jmax,lmax,nmax,gpmax;
+	int	jmax,lmax,nmax,gpmax,jmax_nopi;
 	long double oldloglik,loglik;
-	double U[3][3],Usim,Udis;
+	double U[3][3],Usim,Udis,*expS_nopi,pmax_nopi;
 	int nj,ni,npi=1,sites_individuals,npar;
 	double *geom_score,*geom_nopi_score,mincov;
-	int warning=0;
+	int warning=0,expert=0;
 
 	std::vector<ContigA> contigs;
 
@@ -773,8 +773,8 @@ int main(int argc, char *argv[]) {
 	}
 	fprintf(stdout,"\n");
 	
-	if (argc < 8 && argc > 10) {
-		fprintf(stderr,"Usage: %s infile outfile mode errormodel heterogamety ploidy paralogs (min_coverage)\n",argv[0]);
+	if (argc < 8 || argc > 10) {
+		fprintf(stderr,"Usage: %s infile outfile errormodel heterogamety ploidy paralogs expert (min_coverage)\n",argv[0]);
 		exit(1);
 	}
 
@@ -787,18 +787,6 @@ int main(int argc, char *argv[]) {
 	if((outfile=fopen(argv[i],"w"))==NULL){
 		fprintf(stderr,"error opening output file %s\n",argv[2]);
 		exit(1);
-	}
-	i++;
-	if(strcmp(argv[i],"c")==0 || strcmp(argv[i],"1")==0) {
-		mode=CONTIG;
-	}
-	else if (strcmp(argv[i],"s")==0 || strcmp(argv[i],"0")==0) {
-		mode=SITE;
-	}
-	else {
-		fprintf(stderr,"Usage: %s infile outfile mode errormodel heterogamety ploidy paralogs\n",argv[0]);
-		fprintf(stderr,"Mode should be either \"c\" or \"1\" for contig-mode, or \"s\" or \"0\" for site-wise optimisation\n");
-		exit(1);	
 	}
 	i++;
 
@@ -825,7 +813,7 @@ int main(int argc, char *argv[]) {
 		errormodel=READ_FROM_CNT_FILE;
 	}
 	else {
-		fprintf(stderr,"Usage: %s infile outfile mode errormodel heterogamety ploidy paralogs\n",argv[0]);
+		fprintf(stderr,"Usage: %s infile outfile errormodel heterogamety ploidy paralogs expert (min_coverage)\n",argv[0]);
 		fprintf(stderr,"Errormodel should be either \"e\" or \"1\" to estimate errors, \"f\" or \"2\" to use fixed error rates, or \"n\" or \"0\" for no errors\n");
 		exit(1);	
 	}
@@ -851,7 +839,7 @@ int main(int argc, char *argv[]) {
 		npi+=2;
 	}
 	else {
-		fprintf(stderr,"Usage: %s infile outfile mode errormodel heterogamety ploidy paralogs\n",argv[0]);
+		fprintf(stderr,"Usage: %s infile outfile errormodel heterogamety ploidy paralogs expert (min_coverage)\n",argv[0]);
 		fprintf(stderr,"Heterogamety should be either be \"x\" or \"1\" for XY type, \"z\" or \"2\" for ZW type, \"n\" or \"0\" for no sex chromosomes, or \"b\" or \"3\" for both.\n");
 		exit(1);	
 	}
@@ -865,7 +853,7 @@ int main(int argc, char *argv[]) {
 		npi++;
 	}
 	else {
-		fprintf(stderr,"Usage: %s infile outfile mode errormodel heterogamety ploidy paralogs\n",argv[0]);
+		fprintf(stderr,"Usage: %s infile outfile errormodel heterogamety ploidy paralogs expert (min_coverage)\n",argv[0]);
 		fprintf(stderr,"Ploidy should be either be \"d\" or \"0\" for diploid only, \"h\" or \"1\" for including haploid genes\n");
 		exit(1);	
 	}
@@ -878,10 +866,23 @@ int main(int argc, char *argv[]) {
 		npi++;
 	}
 	else {
-		fprintf(stderr,"Usage: %s infile outfile mode errormodel heterogamety ploidy paralogs\n",argv[0]);
+		fprintf(stderr,"Usage: %s infile outfile errormodel heterogamety ploidy paralogs expert (min_coverage)\n",argv[0]);
 		fprintf(stderr,"Paralogs should be either be \"o\" or \"0\" for orthologs only, \"p\" or \"1\" for including paralogy\n");
 		exit(1);	
 	}
+	i++;
+	if(strcmp(argv[i],"s")==0 || strcmp(argv[i],"0")==0) {
+		expert=0;
+	}
+	else if (strcmp(argv[i],"e")==0 || strcmp(argv[i],"1")==0) {
+		expert=1;
+	}
+	else {
+		fprintf(stderr,"Usage: %s infile outfile errormodel heterogamety ploidy paralogs expert (min_coverage)\n",argv[0]);
+		fprintf(stderr,"expert should be either be \"s\" or \"0\" for simple output mode, \"e\" or \"1\" for expert output mode\n");
+		exit(1);	
+	}
+
 	i++;
 	if (argc == i+1 ) {
 		char * fin;
@@ -901,10 +902,12 @@ int main(int argc, char *argv[]) {
 			pi[j]=1./(double)npi;
 	});
 	
-	fprintf(stdout,"Some hardcoded or system-dependent values:\n");
-	fprintf(stdout,"Minimum positive value for double: %e\n",DBL_MIN);
-	fprintf(stdout,"Minimum positive value for double (GSL): %e\n",GSL_DBL_MIN);
-	fprintf(stdout,"Minimum positive value for long double: %Le\n",LDBL_MIN);
+	if(expert){
+		fprintf(stdout,"Some hardcoded or system-dependent values:\n");
+		fprintf(stdout,"Minimum positive value for double: %e\n",DBL_MIN);
+		fprintf(stdout,"Minimum positive value for double (GSL): %e\n",GSL_DBL_MIN);
+		fprintf(stdout,"Minimum positive value for long double: %Le\n",LDBL_MIN);
+	}
 	fprintf(stdout,"Criterium for convergence: delta < %e\n",stop);
 	fprintf(stdout,"\n");
 	fprintf(stdout,"Reading...\n");
@@ -1012,49 +1015,23 @@ int main(int argc, char *argv[]) {
     }
     
 	foreach_l_xy(model,[&](const auto l,const auto jl,const auto j){
-	//for(l=0;l<LTYPES;l++) {
-		//if(l<=1){
-		//	rho[J_SEX][l]=0;
-		//}
-		//else {
-		//	rho[J_SEX][l]=1./2;
-		//}
 		rho[J_SEX][l]=1./4;
 	});		
 	foreach_l_zw(model,[&](const auto l,const auto jl,const auto j){
-	//for(l=0;l<LTYPES;l++) {
 		rho[J_ZW][l]=1./4;
 	});		
 	foreach_l_para(model,[&](const auto l,const auto jl,const auto j){
-	//for(l=0;l<LTYPES;l++) {
 		rho[J_PARA][l]=1./2;
 	});		
 	calcQ(Q,e,e,e);		
 	
 	// Calculate conditional probabilities per site
 	CondSiteProbs(contigs,model,Q,P,condsiteprob);
-	CondSegProbs(contigs,model,rho,condsiteprob,condsegprob);
-	//k=1;
-	//ContigA & current_contig = contigs[k];
-	//npolysites=current_contig.varsites.size();
-	//for(t=0;t<npolysites;t++){
-	//			for (i=0; i<6; i++) {
-	//				fprintf(stdout,"%d\t",current_contig.varsites[t].genotypes_by_sex[i]);
-	//			}
-	//	for(j=0;j<JTYPES;j++){
-	//		fprintf(stdout,"%d: %Lf;\t",j,condsegprob[k][t][j]);
-	//	}
-	//	fprintf(stdout,"\n");
-	//}
-	
+	CondSegProbs(contigs,model,rho,condsiteprob,condsegprob);	
 	
 	//initial likelihood
-	if (mode == SITE) {
-		loglik=totalsiteloglik(contigs,pi,rho);
-	}
-	else {
-		loglik=totalcontigloglik(contigs,pi,rho);
-	}
+	loglik=totalsiteloglik(contigs,pi,rho);
+
 	fprintf(stdout,"Initial values:\npi:");
 	for(j=0;j<JTYPES;j++) {
 		fprintf(stdout," %f",pi[j]);
@@ -1062,13 +1039,11 @@ int main(int argc, char *argv[]) {
 	if(model.xy || model.zw){
 		fprintf(stdout,"; rho");
 		foreach_l_xy(model,[&](const auto l,const auto jl,const auto j){
-		//for(l=0;l<LTYPES;l++) {
 			if(l==0 || l==2) {
 				fprintf(stdout," %f (%Le)",rho[j][l],rhodelta[j][l]);
 			}
 		});
 		foreach_l_zw(model,[&](const auto l,const auto jl,const auto j){
-		//for(l=0;l<LTYPES;l++) {
 			if(l==0 || l==2) {
 				fprintf(stdout," %f (%Le)",rho[j][l],rhodelta[j][l]);
 			}
@@ -1094,9 +1069,7 @@ int main(int argc, char *argv[]) {
 							maxl=-INFINITY;
 							lmax=-1;
 							foreach_l_xy(model,[&](const auto l,const auto jl,const auto j){
-									//for(l=0;l<LTYPES;l++) {
 									templ[l]=logl(condsiteprob[k][t][jl]);
-									//templ[l]=condsiteprob[k][t][j+l];
 									if(templ[l]>=maxl){
 										maxl=templ[l];
 										lmax=l;
@@ -1129,9 +1102,7 @@ int main(int argc, char *argv[]) {
 							maxl=-INFINITY;
 							lmax=-1;
 							foreach_l_zw(model,[&](const auto l,const auto jl,const auto j){
-									//for(l=0;l<LTYPES;l++) {
 									templ[l]=logl(condsiteprob[k][t][jl]);
-									//templ[l]=condsiteprob[k][t][j+l];
 									if(templ[l]>=maxl){
 										maxl=templ[l];
 										lmax=l;
@@ -1143,9 +1114,7 @@ int main(int argc, char *argv[]) {
 							maxl=-INFINITY;
 							lmax=-1;
 							foreach_l_para(model,[&](const auto l,const auto jl,const auto j){
-									//for(l=0;l<LTYPES;l++) {
 									templ[l]=logl(condsiteprob[k][t][jl]);
-									//templ[l]=condsiteprob[k][t][j+l];
 									if(templ[l]>=maxl){
 										maxl=templ[l];
 										lmax=l;
@@ -1153,16 +1122,13 @@ int main(int argc, char *argv[]) {
 							});
 							loghorner(2,lmax,templ,rho[J_PARA],expA[k][t][J_PARA]);
 						}
-						//horner(LTYPES,lmax,templ,rho,expA[k][t]);				
 					}
 					//segregation types
-					if (mode==SITE) {		//site-wise
 						for(t=0;t<npolysites;t++){
 							//Expectations of segregation types
 							jmax=SITEprobs(JTYPES,condsegprob[k][t],temp);
 							loghorner(JTYPES,jmax,temp,pi,expS[k][t]);			
 							foreach_j(model,[&](const auto j){
-									//for(j=0;j<JTYPES;j++){
 									if(isnan(expS[k][t][j])){
 										fprintf(stderr,"NaN produced (expS): contig %d, site %d, type %d: %f\n",k,current_contig.varsites[t].position,j,expS[k][t][j]);
 										for (i=0; i<6; i++) {
@@ -1183,88 +1149,24 @@ int main(int argc, char *argv[]) {
 										fprintf(stderr,"Inf produced (expS): contig %d, site %d, type %d: %f\n",k,current_contig.varsites[t].position,j,expS[k][t][j]);
 									}
 							});
-							//					horner(JTYPES,jmax,temp,pi,expS[k][t]);
 						}
-					}
-					else { // mode == CONTIG
-						jmax=contigCONTIGprobs(JTYPES,npolysites,condsegprob[k],contigllik[k]);
-				loghorner(JTYPES,jmax,contigllik[k],pi,expR[k]);
-//				horner(JTYPES,jmax,temp,pi,expR[k]);
-//				maxj=-1.;
-//				jmax=-1;
-//				for(j=0;j<JTYPES;j++) {
-//					temp[j]=1.;
-//					for(t=0;t<npolysites[k];t++){
-//						temp[j]*=condsegprob[k][t][j];
-//					}
-//					if(temp[j]>maxj){
-//						maxj=temp[j];
-//						jmax=j;
-//					}			
-//				}
-//				horner(JTYPES,jmax,temp,pi,expR[k]);
-				//auto do_stuff = [&exprR, k](const j) {
-					foreach_j(model,[&](const auto j){
-						if(isnan(expR[k][j])){
-							fprintf(stderr,"NaN produced (expR): contig %d, type %d: %f\n",k,j,expR[k][j]);
-							warning=1;
-						}
-						else if(isinf(expR[k][j])){
-							fprintf(stderr,"Inf produced (expR): contig %d, type %d: %f\n",k,j,expR[k][j]);
-						}
-				});
-				//foreach_j (mode, do_stuff);
-				
-/*				for(j=0;j<JTYPES;j++){
-					if(isnan(expR[k][j])){
-						fprintf(stderr,"NaN produced (expR): contig %d, type %d: %f\n",k,j,expR[k][j]);
-						exit(1);
-					}
-						else if(isinf(expR[k][j])){
-							fprintf(stderr,"Inf produced (expR): contig %d, type %d: %f\n",k,j,expR[k][j]);
-						}
-					}*/
-			}
 			//Expectations of true genotypes (independent of site- or contig-wise mode)
-			//if(k==0){
-			//	printf("\n");
-			//	for (i=0; i<6; i++) {
-			//		printf("%d\t",current_contig.varsites[0].genotypes_by_sex[i]);
-			//	}
-			//	printf("\n");
-			//}
 			if(errormodel==ERRORS) {
 				for(t=0;t<npolysites;t++){
 					foreach_jl(model,[&](const auto jl){
-					//for(jl=0;jl<JLTYPES;jl++) {
 						for(s=0;s<2;s++){
-							//if(k==0 && t==0){
-							//printf("k=%d t=%d s=%d jl=%d:",k,t,s,jl);
-							//	for(gp=0;gp<3;gp++){
-							//		printf("\t%f",P[k][t][s][jl][gp]);
-							//	}
-							//	printf("\n");
-							//}
 							for(g=0;g<3;g++){
 								maxgp=-INFINITY;
 								gpmax=-1;
 								sumgp=0;
 								for(gp=0;gp<3;gp++){
 									temp[gp]=logl((long double)P[k][t][s][jl][gp]);
-									//								sumgp+=temp[gp];
 									if(temp[gp]>=maxgp){
 										maxgp=temp[gp];
 										gpmax=gp;
 									}
 								}
 								loghorner(3,gpmax,temp,Q[g],expTG[k][t][s][jl][g]);						
-							//if(k==0 && t==0){
-							//	printf("g=%d:",g);
-							//	for(gp=0;gp<3;gp++){
-							//		printf("\t%f",expTG[k][t][s][jl][g][gp]);
-							//	}
-							//	printf("\n");
-							//}
 									for(gp=0;gp<3;gp++){
 									if(isnan(expTG[k][t][s][jl][g][gp])){
 										fprintf(stderr,"NaN produced (expTG): k=%d t=%d s=%d jl=%d g=%d gp=%d: %f\n",k,t,s,jl,g,gp,expR[k][j]);
@@ -1282,19 +1184,9 @@ int main(int argc, char *argv[]) {
 			}
 		}
 		
-//		if(mode == SITE){
-//			fprintf(stdout,"\nE-step: %Lf\n",condsiteexpect(contigs,pi,rho,Q));
-//		}
-//		else{
-//			fprintf(stdout,"\nE-step: %Lf\n",condcontigexpect(contigs,pi,rho,Q));
-//		}
-		
-		//M-step
 		//Calculate new values for pi
-		if (mode==SITE) {		//site-wise
-			sumpi=0;
-			foreach_j(model,[&](const auto j){
-			//for(j=0;j<JTYPES;j++) {
+		sumpi=0;
+		foreach_j(model,[&](const auto j){
 				oldpi[j]=pi[j];
 				sumET=0;
 				totsites=0;
@@ -1309,35 +1201,13 @@ int main(int argc, char *argv[]) {
 				}
 				pi[j]=(long double)sumET/(long double)totsites;
 				sumpi+=pi[j];
-			});
-		}
-		else { // mode == CONTIG
-			foreach_j(model,[&](const auto j){
-			//for(j=0;j<JTYPES;j++) {
-				oldpi[j]=pi[j];
-			});
-			sumpi=0;
-			foreach_j(model,[&](const auto j){
-			//for(j=0;j<JTYPES;j++){ 
-				sumET=0;
-				for (k=0;k<contigs.size();k++) {
-					ContigA & current_contig = contigs[k];
-					if((npolysites=current_contig.varsites.size())>0) {
-						sumET+=expR[k][j];
-					}
-				}
-				pi[j]=(long double)sumET/(long double)(ncontigs-nnoncontigs);
-				sumpi+=pi[j];
-			});
-		}
+		});
 		if (model.xy || model.zw) {
-		//Calculate new values for rho
-		foreach_l_xy(model,[&](const auto l,const auto jl, const auto j){
-			//for(l=0;l<LTYPES;l++){
+			//Calculate new values for rho
+			foreach_l_xy(model,[&](const auto l,const auto jl, const auto j){
 			oldrho[j][l]=rho[j][l];
 		});
 		foreach_l_zw(model,[&](const auto l,const auto jl, const auto j){
-			//for(l=0;l<LTYPES;l++){
 			oldrho[j][l]=rho[j][l];
 		});
 
@@ -1348,14 +1218,8 @@ int main(int argc, char *argv[]) {
 				ContigA & current_contig = contigs[k];
 				if((npolysites=current_contig.varsites.size())>0) {
 					for (t=0; t<npolysites; t++){
-						if(mode==SITE){
 							sumET+=(expA[k][t][J_SEX][0]+expA[k][t][J_SEX][1])*expS[k][t][J_SEX];
 							weights+=expS[k][t][J_SEX];
-						}
-						else {
-							sumET+=(expA[k][t][J_SEX][0]+expA[k][t][J_SEX][1])*expR[k][J_SEX];
-							weights+=expR[k][J_SEX];
-						}
 					}
 				}
 			}
@@ -1371,14 +1235,8 @@ int main(int argc, char *argv[]) {
 				ContigA & current_contig = contigs[k];
 				if((npolysites=current_contig.varsites.size())>0) {
 					for (t=0; t<npolysites; t++){
-						if(mode==SITE){
 							sumET+=(expA[k][t][J_ZW][0]+expA[k][t][J_ZW][1])*expS[k][t][J_ZW];
 							weights+=expS[k][t][J_ZW];
-						}
-						else {
-							sumET+=(expA[k][t][J_ZW][0]+expA[k][t][J_ZW][1])*expR[k][J_ZW];
-							weights+=expR[k][J_ZW];
-						}
 					}
 				}
 			}
@@ -1389,12 +1247,10 @@ int main(int argc, char *argv[]) {
 		}
 		sumrho=0;
 		foreach_l_xy(model,[&](const auto l,const auto jl, const auto j){
-			//for(l=0;l<LTYPES;l++){
 			sumrho+=rho[j][l];
 		});
 		foreach_l_zw(model,[&](const auto l,const auto jl, const auto j){
-			//for(l=0;l<LTYPES;l++){
-			sumrho+=rho[j][l];
+				sumrho+=rho[j][l];
 		});
 		}
 		//Calculate new values for e
@@ -1410,50 +1266,24 @@ int main(int argc, char *argv[]) {
 								for(s=0;s<2;s++) {
 									temp[s]=0;
 									auto lfunc = [&](const auto l,const auto jl,const auto j){
-										if(mode==SITE){
-											temp[s]+=(long double)expTG[k][t][s][jl][g][gp]*(long double)expS[k][t][j]*(long double)expA[k][t][j][l];
-											if(isnan(temp[s])){
-												fprintf(stderr,"NaN produced (M-step, new value for e): contig %d, site %d, sex %d, type %d, subtype %d (%d): %Le\n",k,current_contig.varsites[t].position,s,j,jl,l,temp[s]);
-												fprintf(stderr,"%e\t%e\t%e\n",expTG[k][t][s][jl][g][gp],expS[k][t][j],expA[k][t][j][l]);
-											}										
-										}
-										else {
-											temp[s]+=(long double)expTG[k][t][s][jl][g][gp]*(long double)expR[k][j]*(long double)expA[k][t][j][l];
-											if(isnan(temp[s])){
-												fprintf(stderr,"NaN produced (M-step, new value for e): contig %d, site %d, sex %d, type %d, subtype %d (%d): %Le\n",k,current_contig.varsites[t].position,s,j,jl,l,temp[s]);
-												fprintf(stderr,"%e\t%e\t%e\n",expTG[k][t][s][jl][g][gp],expR[k][j],expA[k][t][j][l]);
-											}										
-										}
+										temp[s]+=(long double)expTG[k][t][s][jl][g][gp]*(long double)expS[k][t][j]*(long double)expA[k][t][j][l];
+										if(isnan(temp[s])){
+											fprintf(stderr,"NaN produced (M-step, new value for e): contig %d, site %d, sex %d, type %d, subtype %d (%d): %Le\n",k,current_contig.varsites[t].position,s,j,jl,l,temp[s]);
+											fprintf(stderr,"%e\t%e\t%e\n",expTG[k][t][s][jl][g][gp],expS[k][t][j],expA[k][t][j][l]);
+										}										
 									};
 									foreach_j(model,[&](const auto j){
-											//for(j=0;j<JTYPES;j++) {
 											if(j== J_AUTO || j== J_HAPLOID){
-												if(mode==SITE){
-													temp[s]+=(long double)expTG[k][t][s][j][g][gp]*(long double)expS[k][t][j];
-												}
-												else {
-													temp[s]+=(long double)expTG[k][t][s][j][g][gp]*(long double)expR[k][j];
-												}
+												temp[s]+=(long double)expTG[k][t][s][j][g][gp]*(long double)expS[k][t][j];
 												if(isnan(temp[s])){
 													fprintf(stderr,"NaN produced (M-step, new value for e): contig %d, site %d, sex %d, type %d: %Le\n",k,current_contig.varsites[t].position,s,j,temp[s]);
 												}
 											}
 											if(j==J_PARA){
 												foreach_l_para(model,lfunc);
-												//if(mode==SITE){
-												//	temp[s]+=(long double)(expTG[k][t][s][JL_PARA1][g][gp]+expTG[k][t][s][JL_PARA2][g][gp])*0.5*(long double)expS[k][t][j];
-												//}
-												//else {
-												//	temp[s]+=(long double)(expTG[k][t][s][JL_PARA1][g][gp]+expTG[k][t][s][JL_PARA2][g][gp])*0.5*(long double)expTG[k][t][s][j][g][gp]*(long double)expR[k][j];
-												//}
 											}
 											if(j==J_HEMI){
-												if(mode==SITE){
-													temp[s]+=(long double)expTG[k][t][s][JL_HEMI][g][gp]*(long double)expS[k][t][j];
-												}
-												else {
-													temp[s]+=(long double)expTG[k][t][s][JL_HEMI][g][gp]*(long double)expR[k][j];
-												}
+												temp[s]+=(long double)expTG[k][t][s][JL_HEMI][g][gp]*(long double)expS[k][t][j];
 												if(isnan(temp[s])){
 													fprintf(stderr,"NaN produced (M-step, new value for e): contig %d, site %d, sex %d, type %d: %Le\n",k,current_contig.varsites[t].position,s,j,temp[s]);
 												}
@@ -1462,12 +1292,7 @@ int main(int argc, char *argv[]) {
 												foreach_l_xy(model,lfunc);
 											}
 											if(j==J_ZHEMI){
-												if(mode==SITE){
-													temp[s]+=(long double)expTG[k][t][s][JL_ZHEMI][g][gp]*(long double)expS[k][t][j];
-												}
-												else {
-													temp[s]+=(long double)expTG[k][t][s][JL_ZHEMI][g][gp]*(long double)expR[k][j];
-												}
+												temp[s]+=(long double)expTG[k][t][s][JL_ZHEMI][g][gp]*(long double)expS[k][t][j];
 												if(isnan(temp[s])){
 													fprintf(stderr,"NaN produced (M-step, new value for e): contig %d, site %d, sex %d, type %d: %Le\n",k,current_contig.varsites[t].position,s,j,temp[s]);
 												}
@@ -1558,24 +1383,13 @@ int main(int argc, char *argv[]) {
 
 		//new log-likelihood
 		oldloglik=loglik;
-		if(mode == SITE){
-			loglik=totalsiteloglik(contigs,pi,rho);
-		}
-		else {
-			loglik=totalcontigloglik(contigs,pi,rho);
-		}
+		loglik=totalsiteloglik(contigs,pi,rho);
 		fprintf(stdout,", log-likelihood: %Lf\n",loglik);
 		if(oldloglik > loglik){
 			fprintf(stderr,"Warning: log-likelihood decreases by %Lf; interrupting maximization and proceeding to output\n",oldloglik-loglik);
 			warning=1;
 		}
 
-//		if(mode == SITE){
-//			fprintf(stdout,"M-step: %Lf\n",condsiteexpect(contigs,pi,rho,Q));
-//		}
-//		else{
-//			fprintf(stdout,"M-step: %Lf\n",condcontigexpect(contigs,pi,rho,Q));
-//		}
 	}
 	//End of EM algorithm. Outputting
 	
@@ -1627,160 +1441,192 @@ int main(int argc, char *argv[]) {
 	
 	//output headers
 	fprintf(outfile,"#>contig_name\tN_sites\tmean_coverage");
-	foreach_j(model,[&](const auto j){
-			if(j==J_AUTO){
-				fprintf(outfile,"\tj_autosomal posterior_autosomal geometric_autosomal noprior_autosomal");
-			}
-			if(j==J_HAPLOID){
-				fprintf(outfile,"\tj_haploid posterior_haploid geometric_haploid noprior_haploid");
-			}
-			if(j==J_PARA){
-				fprintf(outfile,"\tj_paralog posterior_paralog geometric_paralog noprior_paralog");
-			}
-			if(j==J_HEMI){
-				fprintf(outfile,"\tj_xhemizygote posterior_xhemizygote geometric_xhemizygote noprior_xhemizygote");
-			}
-			if(j==J_ZHEMI){
-				fprintf(outfile,"\tj_zhemizygote posterior_zhemizygote geometric_zhemizygote noprior_zhemizygote");
-			}
-			if(j==J_SEX){
-				fprintf(outfile,"\tj_xy posterior_xy geometric_xy noprior_xy");
-			}
-			if(j==J_ZW){
-				fprintf(outfile,"\tj_zw posterior_zw geometric_zw noprior_zw");
-			}
-	});
-	fprintf(outfile,"\tmax_posterior max_geometric max_noprior\n");
-	fprintf(outfile,"#position\talleles\tN11F\tN12F\tN22F\tN11M\tN12M\tN22M\t");
-	if(model.xy){
-		fprintf(outfile,"fx_max fy_max\t");
-		fprintf(outfile,"fx_mean fy_mean\t");
-	}
-	if(model.zw){
-		fprintf(outfile,"fz_max fw_max\t");
-		fprintf(outfile,"fz_mean fw_mean\t");		
-	}
-	foreach_l_xy(model,[&](const auto l,const auto jl,const auto j){
-			fprintf(outfile,"subxy_%d\t",l+1);
-	});
-	foreach_l_zw(model,[&](const auto l,const auto jl,const auto j){
-			fprintf(outfile,"subzw_%d\t",l+1);
-	});
-	if(mode==SITE){
+	if(expert){
 		foreach_j(model,[&](const auto j){
-			if(j==J_AUTO){
-				fprintf(outfile,"logL_autosomal posterior_autosomal\t");
-			}                    
-			if(j==J_HAPLOID){    
-				fprintf(outfile,"logL_haploid posterior_haploid\t");
-			}                    
-			if(j==J_PARA){       
-				fprintf(outfile,"logL_paralog posterior_paralog\t");
-			}                    
-			if(j==J_HEMI){       
-				fprintf(outfile,"logL_xhemizygote posterior_xhemizygote\t");
-			}                    
-			if(j==J_ZHEMI){      
-				fprintf(outfile,"logL_zhemizygote posterior_zhemizygote\t");
-			}                    
-			if(j==J_SEX){        
-				fprintf(outfile,"logL_xy posterior_xy\t");
-			}                    
-			if(j==J_ZW){         
-				fprintf(outfile,"logL_zw posterior_zw\t");
-			}
+				if(j==J_AUTO){
+					fprintf(outfile,"\tj_autosomal posterior_autosomal geometric_autosomal noprior_autosomal");
+				}
+				if(j==J_HAPLOID){
+					fprintf(outfile,"\tj_haploid posterior_haploid geometric_haploid noprior_haploid");
+				}
+				if(j==J_PARA){
+					fprintf(outfile,"\tj_paralog posterior_paralog geometric_paralog noprior_paralog");
+				}
+				if(j==J_HEMI){
+					fprintf(outfile,"\tj_xhemizygote posterior_xhemizygote geometric_xhemizygote noprior_xhemizygote");
+				}
+				if(j==J_ZHEMI){
+					fprintf(outfile,"\tj_zhemizygote posterior_zhemizygote geometric_zhemizygote noprior_zhemizygote");
+				}
+				if(j==J_SEX){
+					fprintf(outfile,"\tj_xy posterior_xy geometric_xy noprior_xy");
+				}
+				if(j==J_ZW){
+					fprintf(outfile,"\tj_zw posterior_zw geometric_zw noprior_zw");
+				}
 		});
-	}
-	else {
+		fprintf(outfile,"\tmax_posterior max_geometric max_noprior\n");
+		fprintf(outfile,"#position\talleles\tN11F\tN12F\tN22F\tN11M\tN12M\tN22M\t");
+		if(model.xy){
+			fprintf(outfile,"fx_max fy_max\t");
+			fprintf(outfile,"fx_mean fy_mean\t");
+		}
+		if(model.zw){
+			fprintf(outfile,"fz_max fw_max\t");
+			fprintf(outfile,"fz_mean fw_mean\t");		
+		}
+		foreach_l_xy(model,[&](const auto l,const auto jl,const auto j){
+				fprintf(outfile,"subxy_%d\t",l+1);
+		});
+		foreach_l_zw(model,[&](const auto l,const auto jl,const auto j){
+				fprintf(outfile,"subzw_%d\t",l+1);
+		});
 		foreach_j(model,[&](const auto j){
-			if(j==J_AUTO){
-				fprintf(outfile,"logL_autosomal\t");
-			}                    
-			if(j==J_HAPLOID){    
-				fprintf(outfile,"logL_haploid\t");
-			}                    
-			if(j==J_PARA){       
-				fprintf(outfile,"logL_paralog\t");
-			}                    
-			if(j==J_HEMI){       
-				fprintf(outfile,"logL_xhemizygote\t");
-			}                    
-			if(j==J_ZHEMI){      
-				fprintf(outfile,"logL_zhemizygote\t");
-			}                    
-			if(j==J_SEX){        
-				fprintf(outfile,"logL_xy\t");
-			}                    
-			if(j==J_ZW){         
-				fprintf(outfile,"logL_zw\t");
-			}
+				if(j==J_AUTO){
+					fprintf(outfile,"logL_autosomal posterior_autosomal noprior_autosomal\t");
+				}                    
+				if(j==J_HAPLOID){    
+					fprintf(outfile,"logL_haploid posterior_haploid noprior_haploid\t");
+				}                    
+				if(j==J_PARA){       
+					fprintf(outfile,"logL_paralog posterior_paralog noprior_paralog\t");
+				}                    
+				if(j==J_HEMI){       
+					fprintf(outfile,"logL_xhemizygote posterior_xhemizygote noprior_xhemizygote\t");
+				}                    
+				if(j==J_ZHEMI){      
+					fprintf(outfile,"logL_zhemizygote posterior_zhemizygote noprior_zhemizygote\t");
+				}                    
+				if(j==J_SEX){        
+					fprintf(outfile,"logL_xy posterior_xy noprior_xy\t");
+				}                    
+				if(j==J_ZW){         
+					fprintf(outfile,"logL_zw posterior_zw noprior_zw\t");
+				}
 		});
+		fprintf(outfile,"j_max j_max_noprior\n");
 	}
-	fprintf(outfile,"j_max\n");
-	
+	else { //simple output mode
+		foreach_j(model,[&](const auto j){
+				if(j==J_AUTO){
+					fprintf(outfile,"\tj_autosomal noprior_autosomal");
+				}
+				if(j==J_HAPLOID){
+					fprintf(outfile,"\tj_haploid noprior_haploid");
+				}
+				if(j==J_PARA){
+					fprintf(outfile,"\tj_paralog noprior_paralog");
+				}
+				if(j==J_HEMI){
+					fprintf(outfile,"\tj_xhemizygote noprior_xhemizygote");
+				}
+				if(j==J_ZHEMI){
+					fprintf(outfile,"\tj_zhemizygote noprior_zhemizygote");
+				}
+				if(j==J_SEX){
+					fprintf(outfile,"\tj_xy noprior_xy");
+				}
+				if(j==J_ZW){
+					fprintf(outfile,"\tj_zw noprior_zw");
+				}
+		});
+		fprintf(outfile,"\tmax\n");
+		fprintf(outfile,"#position\talleles\tN11F\tN12F\tN22F\tN11M\tN12M\tN22M\t");
+		if(model.xy){
+			fprintf(outfile,"fx_mean fy_mean\t");
+		}
+		if(model.zw){
+			fprintf(outfile,"fz_mean fw_mean\t");
+		}
+		foreach_l_xy(model,[&](const auto l,const auto jl,const auto j){
+				fprintf(outfile,"subxy_%d\t",l+1);
+		});
+		foreach_l_zw(model,[&](const auto l,const auto jl,const auto j){
+				fprintf(outfile,"subzw_%d\t",l+1);
+		});
+		foreach_j(model,[&](const auto j){
+				if(j==J_AUTO){
+					fprintf(outfile,"noprior_autosomal\t");
+				}                    
+				if(j==J_HAPLOID){    
+					fprintf(outfile,"noprior_haploid\t");
+				}                    
+				if(j==J_PARA){       
+					fprintf(outfile,"noprior_paralog\t");
+				}                    
+				if(j==J_HEMI){       
+					fprintf(outfile,"noprior_xhemizygote\t");
+				}                    
+				if(j==J_ZHEMI){      
+					fprintf(outfile,"noprior_zhemizygote\t");
+				}                    
+				if(j==J_SEX){        
+					fprintf(outfile,"noprior_xy\t");
+				}                    
+				if(j==J_ZW){         
+					fprintf(outfile,"noprior_zw\t");
+				}
+		});
+		fprintf(outfile,"j_max_noprior\n");
+	}
+
+	if((expS_nopi= (double *)calloc((size_t)JTYPES,sizeof(double)))==NULL) { 
+		fprintf(stderr,"error in memory allocation\n");
+		exit(1);
+	}
+
 	for (k=0;k<contigs.size();k++) {
 		ContigA & current_contig = contigs[k];
 		//calculate likelihoods and posterior probabilities per contig 
-			if((npolysites=current_contig.varsites.size())>0) {
-				if (mode == SITE ) { //calculate mean posterior
-					foreach_j(model,[&](const auto j){
+		if((npolysites=current_contig.varsites.size())>0) {
+			foreach_j(model,[&](const auto j){
 					//for(j=0;j<JTYPES;j++) {
-						sumET=0;
-						for (t=0; t<npolysites; t++){
-							sumET+=expS[k][t][j];
-							//						sumET+=log(condsegprob[k][t][j]/(condsegprob[k][t][bmin[k][t]]));
-						}
-						expR[k][j]=sumET/npolysites;
-					});
-				}
-				//calculate geometric mean scores
-				pmax=0.0;
-				jmax=-1;
-				foreach_j(model,[&](const auto j){
-				//for(j=0;j<JTYPES;j++) {
+					sumET=0;
+					for (t=0; t<npolysites; t++){
+						sumET+=expS[k][t][j];
+						//						sumET+=log(condsegprob[k][t][j]/(condsegprob[k][t][bmin[k][t]]));
+					}
+					expR[k][j]=sumET/npolysites;
+			});
+			//calculate geometric mean scores
+			pmax=0.0;
+			jmax=-1;
+			foreach_j(model,[&](const auto j){
+					//for(j=0;j<JTYPES;j++) {
 					sumL=0;
 					for (t=0; t<npolysites; t++){
 						sumL+=log(condsegprob[k][t][j]);
 					}
 					temp[j]=sumL/npolysites;
 					if(expl(temp[j])>=pmax){
-							pmax=expl(temp[j]);
-							jmax=j;
+						pmax=expl(temp[j]);
+						jmax=j;
 					}
-				});
-				loghorner(JTYPES,jmax,temp,pi,geom_score);
-				//calculate geometric mean scores without priors
-				for(j=0;j<JTYPES;j++) {
-					dumpi[j]=0.;
-				}
-				nj=0;
-				foreach_j(model,[&](const auto j){
+			});
+			loghorner(JTYPES,jmax,temp,pi,geom_score);
+			//calculate geometric mean scores without priors
+			for(j=0;j<JTYPES;j++) {
+				dumpi[j]=0.;
+			}
+			nj=0;
+			foreach_j(model,[&](const auto j){
 					nj++;
-				});
-				foreach_j(model,[&](const auto j){
+			});
+			foreach_j(model,[&](const auto j){
 					dumpi[j]=1./nj;
-				});
-				
-				loghorner(JTYPES,jmax,temp,dumpi,geom_nopi_score);
-				
-
-//			fprintf(outfile,">%s\t%d",&contig[k*NAME_LEN],npolysites[k]);
-//			fprintf(outfile,">%s\t%d",contigs[k].name.data(),npolysites);
+			});
+			
+			loghorner(JTYPES,jmax,temp,dumpi,geom_nopi_score);
+			
+			
 			fprintf(outfile,">%s\t%d",current_contig.name.data(),npolysites);
-//			ni=0;
-//			for (t=0; t<npolysites; t++){
-//				for (i=0; i<6; i++) {
-//					ni+=current_contig.varsites[t].genotypes_by_sex[i];
-//				}
-//			}
-//			fprintf(outfile,"\t%f",(double)ni/(double)npolysites);
 			fprintf(outfile,"\t%f",current_contig.coverage);
-				pmax=0.0;
-				gmax=0.0;
-				rmax=0.0;
-				jmax=-1;
-				lmax=-1;
-				nmax=-1;
+			pmax=0.0;
+			gmax=0.0;
+			rmax=0.0;
+			jmax=-1;
+			lmax=-1;
+			nmax=-1;
 			for(j=0;j<JTYPES;j++) {
 				if(geom_nopi_score[j] > rmax){
 					rmax=geom_nopi_score[j];
@@ -1795,12 +1641,19 @@ int main(int argc, char *argv[]) {
 					jmax=j;
 				}				
 			}
-			foreach_j(model,[&](const auto j){
-			//for(j=0;j<JTYPES;j++) {
-				fprintf(outfile,"\t%d %e %e %e",j+1,expR[k][j],geom_score[j],geom_nopi_score[j]);
-			});
-//			fprintf(outfile,"\t%f\n",zscore(k,npolysites[k],polysite[k],rho,Q,lmax,1000,P[k],condsegprob[k]));			
-			fprintf(outfile,"\t%d %d %d\n",jmax+1,lmax+1,nmax+1);
+			if(expert){
+				foreach_j(model,[&](const auto j){
+						fprintf(outfile,"\t%d %e %e %e",j+1,expR[k][j],geom_score[j],geom_nopi_score[j]);
+				});
+				fprintf(outfile,"\t%d %d %d\n",jmax+1,lmax+1,nmax+1);
+			}
+			else {
+				foreach_j(model,[&](const auto j){
+						fprintf(outfile,"\t%d %e",j+1,geom_nopi_score[j]);
+				});
+				fprintf(outfile,"\t%d\n",nmax+1);
+				
+			}
 			
 			for (t=0; t<npolysites; t++){
 				fprintf(outfile,"%d\t",current_contig.varsites[t].position);
@@ -1838,9 +1691,11 @@ int main(int argc, char *argv[]) {
 					}
 					fprintf(outfile,"%f %f\t",fx,fy);
 					//second method: fx and fy correspond to those matching with the most probable XY segregation subtype
-					fx=expA[k][t][J_SEX][0]*(1-F[k][t][JL_SEX1])+expA[k][t][J_SEX][1]*F[k][t][JL_SEX2]+expA[k][t][J_SEX][2];				
-					fy=expA[k][t][J_SEX][0]+expA[k][t][J_SEX][2]*(1-F[k][t][JL_SEX3])+expA[k][t][J_SEX][3]*F[k][t][JL_SEX4];				
-					fprintf(outfile,"%f %f\t",fx,fy);
+					if(expert){
+						fx=expA[k][t][J_SEX][0]*(1-F[k][t][JL_SEX1])+expA[k][t][J_SEX][1]*F[k][t][JL_SEX2]+expA[k][t][J_SEX][2];				
+						fy=expA[k][t][J_SEX][0]+expA[k][t][J_SEX][2]*(1-F[k][t][JL_SEX3])+expA[k][t][J_SEX][3]*F[k][t][JL_SEX4];				
+						fprintf(outfile,"%f %f\t",fx,fy);
+					}
 				}
 				if(model.zw){
 					pmax=0.0;
@@ -1870,9 +1725,11 @@ int main(int argc, char *argv[]) {
 					}
 					fprintf(outfile,"%f %f\t",fx,fy);
 					//second method: fx and fy correspond to those matching with the most probable XY segregation subtype
-					fx=expA[k][t][J_ZW][0]*(1-F[k][t][JL_ZW1])+expA[k][t][J_ZW][1]*F[k][t][JL_ZW2]+expA[k][t][J_ZW][2];				
-					fy=expA[k][t][J_ZW][0]+expA[k][t][J_ZW][2]*(1-F[k][t][JL_ZW3])+expA[k][t][J_ZW][3]*F[k][t][JL_ZW4];				
-					fprintf(outfile,"%f %f\t",fx,fy);
+					if(expert){
+						fx=expA[k][t][J_ZW][0]*(1-F[k][t][JL_ZW1])+expA[k][t][J_ZW][1]*F[k][t][JL_ZW2]+expA[k][t][J_ZW][2];				
+						fy=expA[k][t][J_ZW][0]+expA[k][t][J_ZW][2]*(1-F[k][t][JL_ZW3])+expA[k][t][J_ZW][3]*F[k][t][JL_ZW4];				
+						fprintf(outfile,"%f %f\t",fx,fy);
+					}
 				}
 				foreach_l_xy(model,[&](const auto l,const auto jl,const auto j){
 						fprintf(outfile,"%e\t",expA[k][t][j][l]);
@@ -1881,30 +1738,48 @@ int main(int argc, char *argv[]) {
 						fprintf(outfile,"%e\t",expA[k][t][j][l]);
 				});
 				
+				//calculate posteriors without priors
+				for(j=0;j<JTYPES;j++) {
+					dumpi[j]=0.;
+				}
+				nj=0;
+				foreach_j(model,[&](const auto j){
+						nj++;
+				});
+				foreach_j(model,[&](const auto j){
+						dumpi[j]=1./nj;
+				});
+				jmax=SITEprobs(JTYPES,condsegprob[k][t],temp);
+				loghorner(JTYPES,jmax,temp,dumpi,expS_nopi);			
+
 				pmax=0.0;
 				jmax=-1;
-				if(mode==SITE){
-					foreach_j(model,[&](const auto j){
+				pmax_nopi=0.0;
+				jmax_nopi=-1;
+				
+				foreach_j(model,[&](const auto j){
+						if (expS_nopi[j]>pmax_nopi) {
+							jmax_nopi=j;
+							pmax_nopi=expS_nopi[j];
+						}
 						if (expS[k][t][j]>pmax) {
 							jmax=j;
 							pmax=expS[k][t][j];
 						}
-						fprintf(outfile,"%Lf %f\t",logl(condsegprob[k][t][j]),expS[k][t][j]);
-					});
-					fprintf(outfile,"%d\n",jmax+1);
+						if(expert){
+							fprintf(outfile,"%Lf %f %f\t",logl(condsegprob[k][t][j]),expS[k][t][j],expS_nopi[j]);
+						}
+						else {
+							fprintf(outfile,"%f\t",expS_nopi[j]);
+						}
+				});
+				if(expert){
+					fprintf(outfile,"%d %d\n",jmax+1,jmax_nopi+1);
 				}
 				else {
-					foreach_j(model,[&](const auto j){
-						fprintf(outfile,"%Lf\t",logl(condsegprob[k][t][j]));
-						if (condsegprob[k][t][j]>pmax) {
-							jmax=j;
-							pmax=condsegprob[k][t][j];
-						}
-					});
-					fprintf(outfile,"%d\n",jmax+1);
+					fprintf(outfile,"%d\n",jmax_nopi+1);
 				}
 			}
-			//		}
 		}
 	}
 	
@@ -1914,10 +1789,11 @@ int main(int argc, char *argv[]) {
     	free(oldrho[j]);
     	free(rhodelta[j]);
     }
+    free(expS_nopi);
     free(rho);
     free(oldrho);
     free(rhodelta);
-
+    
 	freeEM(contigs);
 	free(geom_score);
 	free(geom_nopi_score);
