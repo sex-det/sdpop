@@ -610,7 +610,7 @@ int findsex(char **name, int ni, char **femname, int nfem, char **malname, int n
 std::vector<Genotype> vcfgenotypes(int ni, int *sex, const char *linein, char *nuc, int maxnuc)
 {
 	int i,c,ii;
-	char vcfformatstring[NAME_LEN],genotypestring[NAME_LEN];
+	char vcfformatstring[NAME_LEN],genotypestring[NAME_LEN],contig[NAME_LEN],position[NAME_LEN];
 	char *line = (char*)calloc(strlen(linein)+1,sizeof(char));
 	char *tmpline = (char*)calloc(strlen(linein)+1,sizeof(char));
 	
@@ -618,7 +618,7 @@ std::vector<Genotype> vcfgenotypes(int ni, int *sex, const char *linein, char *n
 	strcpy(line,linein);
 	
 	//strip fields we don't use 
-	sscanf(line,"%*s\t%*s\t%*s\t%*s\t%*s\t%*s\t%*s\t%*s\t%s%[^\n]",vcfformatstring,tmpline);
+	sscanf(line,"%s\t%s\t%*s\t%*s\t%*s\t%*s\t%*s\t%*s\t%s%[^\n]",contig,position,vcfformatstring,tmpline);
 	strcpy(line,tmpline);
 	if(strncmp(vcfformatstring,"GT",2)!=0){
 		fprintf(stderr,"Error: this doesn't seem to be a supported format (\"GT\" tag not found where expected)\n");
@@ -643,7 +643,7 @@ std::vector<Genotype> vcfgenotypes(int ni, int *sex, const char *linein, char *n
 					//									genotypes[j*nfound*2+2*fi+ii]=nuc[c - '0'];
 				}
 				else {
-					fprintf(stderr,"Error in reading genotype\n");
+					fprintf(stderr,"Error in reading genotype: contig %s, position %s, individual %d\n",contig,position,i);
 					exit(1);
 				}
 			}
@@ -661,8 +661,8 @@ std::vector<Genotype> vcfgenotypes(int ni, int *sex, const char *linein, char *n
 
 std::vector<GenotypeA> vcfalleles(int ni, int *sex, const char *linein)
 {
-	int i,c,ii;
-	char vcfformatstring[NAME_LEN],genotypestring[NAME_LEN];
+	int i,c,ii,j,k;
+	char vcfformatstring[NAME_LEN],genotypestring[NAME_LEN],contig[NAME_LEN],position[NAME_LEN],gen[NAME_LEN];
 	char *line = (char*)calloc(strlen(linein)+1,sizeof(char));
 	char *tmpline = (char*)calloc(strlen(linein)+1,sizeof(char));
 	
@@ -670,35 +670,58 @@ std::vector<GenotypeA> vcfalleles(int ni, int *sex, const char *linein)
 	strcpy(line,linein);
 	
 	//strip fields we don't use 
-	sscanf(line,"%*s\t%*s\t%*s\t%*s\t%*s\t%*s\t%*s\t%*s\t%s%[^\n]",vcfformatstring,tmpline);
+	sscanf(line,"%s\t%s\t%*s\t%*s\t%*s\t%*s\t%*s\t%*s\t%s%[^\n]",contig,position,vcfformatstring,tmpline);
 	strcpy(line,tmpline);
 	if(strncmp(vcfformatstring,"GT",2)!=0){
 		fprintf(stderr,"Error: this doesn't seem to be a supported format (\"GT\" tag not found where expected)\n");
 		exit(1);					
 	}
+//	printf("%s\t%s\t",contig,position);
 	
 	for (i=0; i<ni; i++){
 		if (sex[i]>=0) {
 			GenotypeA genotype;
 			sscanf(line,"\t%s%[^\n]",genotypestring,tmpline);
-			for(ii=0;ii<2;ii++){
-				c=genotypestring[2*ii];
-				if(c=='.'){
-					genotype.allele.push_back(-1);
-					//									genotypes[j*nfound*2+2*fi+ii]='N';
-					if(ii==0){
-						genotypestring[2]='.';
-					}
-				}
-				else if ( isdigit(c) ) {
-					genotype.allele.push_back(c - '0');
-					//									genotypes[j*nfound*2+2*fi+ii]=nuc[c - '0'];
-				}
-				else {
-					fprintf(stderr,"Error in reading genotype\n");
-					exit(1);
-				}
+			if(genotypestring[0]=='.'){
+				genotype.allele.push_back(-1);
+				genotype.allele.push_back(-1);				
 			}
+			else {
+				j=0;
+				while(genotypestring[j]!=':' && genotypestring[j]!='/' && genotypestring[j]!='|'){
+					gen[j]=genotypestring[j];
+					j++;
+				}
+				gen[j]='\0';
+//				printf("%d:%s",i,gen);
+				genotype.allele.push_back(atoi(gen));
+				k=0;
+				while(genotypestring[j+k+1]!=':' && genotypestring[j+k+1]!='/' && genotypestring[j+k+1]!='|'){
+					gen[k]=genotypestring[j+k+1];
+					k++;
+				}
+				gen[k]='\0';
+//				printf("/%s\t",gen);
+				genotype.allele.push_back(atoi(gen));
+			}
+//			for(ii=0;ii<2;ii++){
+//				c=genotypestring[2*ii];
+//				if(c=='.'){
+//					genotype.allele.push_back(-1);
+//					//									genotypes[j*nfound*2+2*fi+ii]='N';
+//					if(ii==0){
+//						genotypestring[2]='.';
+//					}
+//				}
+//				else if ( isdigit(c) ) {
+//					genotype.allele.push_back(c - '0');
+//					//									genotypes[j*nfound*2+2*fi+ii]=nuc[c - '0'];
+//				}
+//				else {
+//					fprintf(stderr,"Error in reading genotype: contig %s, position %s, individual %d, genotype %s\n",contig,position,i,genotypestring);
+//					exit(1);
+//				}
+//			}
 			genotypes.push_back(genotype);
 		}
 		else {
@@ -706,6 +729,7 @@ std::vector<GenotypeA> vcfalleles(int ni, int *sex, const char *linein)
 		}
 		strcpy(line,tmpline);
 	}
+//	printf("\n");
 	free(line);
 	free(tmpline);
 	return genotypes;
