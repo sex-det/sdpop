@@ -85,10 +85,16 @@ void treat_and_output(ContigGenotypesA contiggenotypes, ContigA contigsites, std
 	int amax,i,ii,j,div,t;
 	std::string sequenceX;
 	std::string sequenceY;
-	int nsites=0,nmsites=0,nmlen=0,fixed=0,totreflen=0;;
+	int nsites=0,nmsites=0,nmlen=0,fixed=0,totreflen=0,refX=0,refY=0;
 	double pi_X=0,pi_Y=0,divergence=0;
 	
 	for (j=0; j<npos; j++){
+		if(contiggenotypes.genotypes[j].alleles.size()==0){
+				sequenceX+="N";
+				sequenceY+="N";
+				totreflen+=1;
+				continue;
+		}
 		int reflen=contiggenotypes.genotypes[j].alleles[0].length();
 		totreflen+=reflen;
 		amax=-1;
@@ -213,8 +219,23 @@ void treat_and_output(ContigGenotypesA contiggenotypes, ContigA contigsites, std
 					pi_X+=2*contigf[t][0]*(1.-contigf[t][0]);
 					pi_Y+=2*contigf[t][1]*(1.-contigf[t][1]);
 					divergence+=contigf[t][0]*(1.-contigf[t][1])+contigf[t][1]*(1.-contigf[t][0]);
-					if( ( contigf[t][0]>=sitethreshold1 && contigf[t][1]<=1-sitethreshold1 ) || ( contigf[t][1]>=sitethreshold1 && contigf[t][0]<=1-sitethreshold1 ) ) {
+					if( contigf[t][0]>=sitethreshold1 && contigf[t][1]<=1-sitethreshold1 ) {
 						fixed++;
+						if(contiggenotypes.genotypes[j].alleles[0]==StringToUpper(allele1)){
+							refX++;
+						}
+						else if(contiggenotypes.genotypes[j].alleles[0]==StringToUpper(allele2)){
+							refY++;
+						}
+					}
+					else if(contigf[t][1]>=sitethreshold1 && contigf[t][0]<=1-sitethreshold1 ) {
+						fixed++;
+						if(contiggenotypes.genotypes[j].alleles[0]==StringToUpper(allele1)){
+							refY++;
+						}
+						else if(contiggenotypes.genotypes[j].alleles[0]==StringToUpper(allele2)){
+							refX++;
+						}
 					}
 				}
 				else {
@@ -254,9 +275,9 @@ void treat_and_output(ContigGenotypesA contiggenotypes, ContigA contigsites, std
 	}
 	//fprintf(outfile,">%s_X %d %d %d %f %f %d\n",contig,t,fixed,ns,pi_X/ns,divergence/ns,Xref);
 	
-	fprintf(outfile,">%s_X %d %d %d %d %d %d %d %f %f\n",contigsites.name.data(),contigsites.varsites.size(),sequenceX.length(),totreflen,nsites,nmsites,nmlen,fixed,pi_X/nsites,divergence/nsites);
+	fprintf(outfile,">%s_X %d %d %d %d %d %d %d %d %f %f\n",contigsites.name.data(),contigsites.varsites.size(),sequenceX.length(),totreflen,nsites,nmsites,nmlen,fixed,refX,pi_X/nsites,divergence/nsites);
 	fprintf(outfile,"%s\n",sequenceX.data());
-	fprintf(outfile,">%s_Y %d %d %d %d %d %d %d %f %f\n",contigsites.name.data(),contigsites.varsites.size(),sequenceY.length(),totreflen,nsites,nmsites,nmlen,fixed,pi_Y/nsites,divergence/nsites);
+	fprintf(outfile,">%s_Y %d %d %d %d %d %d %d %d %f %f\n",contigsites.name.data(),contigsites.varsites.size(),sequenceY.length(),totreflen,nsites,nmsites,nmlen,fixed,refY,pi_Y/nsites,divergence/nsites);
 	fprintf(outfile,"%s\n",sequenceY.data());
 	//outfunction_ref(outfile,&contig[k*NAME_LEN],s,t,fixed,ns,pi_X,pi_Y,divergence,Xref,Yref,sequenceX,sequenceY);
 }
@@ -462,7 +483,7 @@ int main(int argc, char *argv[])
 					nwords++;
 				}			
 
-				fprintf(outfile,"#contig_name N_poly_sites length reference_length snp_genotyped_length non_snps non_snp_length N_fixed_diff pi divergence\n");
+				fprintf(outfile,"#contig_name N_poly_sites length reference_length snp_genotyped_length non_snps non_snp_length N_fixed_diff N_refalleles pi divergence\n");
 			}
 		}
 		

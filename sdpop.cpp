@@ -55,39 +55,39 @@ void initEM(std::vector<ContigA>& contigs) {
 	//gp: true genotypes, 0="11", 1="12", 2="22"
 	
 	if((P=(double *****)calloc((size_t)ncontigs,sizeof(double ****)))==NULL) { 
-		fprintf(stderr,"error in memory allocation\n");
+		fprintf(stdout,"error in memory allocation\n");
 		exit(1);
 	}
 	if((F=(double ***)calloc((size_t)ncontigs,sizeof(double **)))==NULL) { 
-		fprintf(stderr,"error in memory allocation\n");
+		fprintf(stdout,"error in memory allocation\n");
 		exit(1);
 	}	
 	if((expS=(double ***)calloc((size_t)ncontigs,sizeof(double **)))==NULL) { 
-		fprintf(stderr,"error in memory allocation\n");
+		fprintf(stdout,"error in memory allocation\n");
 		exit(1);
 	}
 	if((expA=(double ****)calloc((size_t)ncontigs,sizeof(double ***)))==NULL) { 
-		fprintf(stderr,"error in memory allocation\n");
+		fprintf(stdout,"error in memory allocation\n");
 		exit(1);
 	}
 	if((condsiteprob=(long double ***)calloc((size_t)ncontigs,sizeof(long double **)))==NULL) { 
-		fprintf(stderr,"error in memory allocation\n");
+		fprintf(stdout,"error in memory allocation\n");
 		exit(1);
 	}
 	if((condsegprob=(long double ***)calloc((size_t)ncontigs,sizeof(long double **)))==NULL) { 
-		fprintf(stderr,"error in memory allocation\n");
+		fprintf(stdout,"error in memory allocation\n");
 		exit(1);
 	}
 	if((expR=(double **)calloc((size_t)ncontigs,sizeof(double *)))==NULL) { 
-		fprintf(stderr,"error in memory allocation\n");
+		fprintf(stdout,"error in memory allocation\n");
 		exit(1);
 	}
 	if((contigllik=(long double **)calloc((size_t)ncontigs,sizeof(long double *)))==NULL) { 
-		fprintf(stderr,"error in memory allocation\n");
+		fprintf(stdout,"error in memory allocation\n");
 		exit(1);
 	}
 	if((expTG=(double ******)calloc((size_t)ncontigs,sizeof(double *****)))==NULL) { 
-		fprintf(stderr,"error in memory allocation\n");
+		fprintf(stdout,"error in memory allocation\n");
 		exit(1);
 	}
 	
@@ -96,98 +96,98 @@ void initEM(std::vector<ContigA>& contigs) {
 		ContigA & current_contig = contigs[k];
 		if((npolysites=current_contig.varsites.size())>0) {
 			if((P[k]=(double ****)calloc((size_t)npolysites,sizeof(double ***)))==NULL) { 
-				fprintf(stderr,"error in memory allocation\n");
+				fprintf(stdout,"error in memory allocation\n");
 				exit(1);
 			}
 			if((F[k]=(double **)calloc((size_t)npolysites,sizeof(double *)))==NULL) { 
-				fprintf(stderr,"error in memory allocation\n");
+				fprintf(stdout,"error in memory allocation\n");
 				exit(1);
 			}
 			if((expS[k]=(double **)calloc((size_t)npolysites,sizeof(double *)))==NULL) { 
-				fprintf(stderr,"error in memory allocation\n");
+				fprintf(stdout,"error in memory allocation\n");
 				exit(1);
 			}
 			if((expA[k]=(double ***)calloc((size_t)npolysites,sizeof(double **)))==NULL) { 
-				fprintf(stderr,"error in memory allocation\n");
+				fprintf(stdout,"error in memory allocation\n");
 				exit(1);
 			}
 			if((condsiteprob[k]=(long double **)calloc((size_t)npolysites,sizeof(long double *)))==NULL) { 
-				fprintf(stderr,"error in memory allocation\n");
+				fprintf(stdout,"error in memory allocation\n");
 				exit(1);
 			}
 			if((condsegprob[k]=(long double **)calloc((size_t)npolysites,sizeof(long double *)))==NULL) { 
-				fprintf(stderr,"error in memory allocation\n");
+				fprintf(stdout,"error in memory allocation\n");
 				exit(1);
 			}
 			if((expR[k]=(double *)calloc((size_t)JTYPES,sizeof(double)))==NULL) { 
-				fprintf(stderr,"error in memory allocation\n");
+				fprintf(stdout,"error in memory allocation\n");
 				exit(1);
 			}
 			if((contigllik[k]=(long double *)calloc((size_t)JTYPES,sizeof(long double)))==NULL) { 
-				fprintf(stderr,"error in memory allocation\n");
+				fprintf(stdout,"error in memory allocation\n");
 				exit(1);
 			}
 			if((expTG[k]=(double *****)calloc((size_t)npolysites,sizeof(double ****)))==NULL) { 
-				fprintf(stderr,"error in memory allocation\n");
+				fprintf(stdout,"error in memory allocation\n");
 				exit(1);
 			}
 			for (t=0; t<npolysites; t++){
 				if((P[k][t]= (double ***)calloc((size_t)SEXES,sizeof(double **)))==NULL) { 
-					fprintf(stderr,"error in memory allocation\n");
+					fprintf(stdout,"error in memory allocation\n");
 					exit(1);
 				}
 				if((F[k][t]= (double *)calloc((size_t)JLTYPES,sizeof(double)))==NULL) { 
-					fprintf(stderr,"error in memory allocation\n");
+					fprintf(stdout,"error in memory allocation\n");
 					exit(1);
 				}
 				if((expS[k][t]= (double *)calloc((size_t)JTYPES,sizeof(double)))==NULL) { 
-					fprintf(stderr,"error in memory allocation\n");
+					fprintf(stdout,"error in memory allocation\n");
 					exit(1);
 				}
 				if((expA[k][t]= (double **)calloc((size_t)JTYPES,sizeof(double *)))==NULL) { 
-					fprintf(stderr,"error in memory allocation\n");
+					fprintf(stdout,"error in memory allocation\n");
 					exit(1);
 				}
 				if((condsiteprob[k][t]= (long double *)calloc((size_t)JLTYPES,sizeof(long double)))==NULL) { 
-					fprintf(stderr,"error in memory allocation\n");
+					fprintf(stdout,"error in memory allocation\n");
 					exit(1);
 				}
 				if((condsegprob[k][t]= (long double *)calloc((size_t)JTYPES,sizeof(long double)))==NULL) { 
-					fprintf(stderr,"error in memory allocation\n");
+					fprintf(stdout,"error in memory allocation\n");
 					exit(1);
 				}
 				if((expTG[k][t]= (double ****)calloc((size_t)SEXES,sizeof(double ***)))==NULL) { 
-					fprintf(stderr,"error in memory allocation\n");
+					fprintf(stdout,"error in memory allocation\n");
 					exit(1);
 				}
 				for(j=0;j<JTYPES;j++){
 					if((expA[k][t][j]= (double *)calloc((size_t)4,sizeof(double)))==NULL) { 
-						fprintf(stderr,"error in memory allocation\n");
+						fprintf(stdout,"error in memory allocation\n");
 						exit(1);
 					}
 				}
 
 				for(s=0;s<SEXES;s++){
 					if((P[k][t][s]= (double **)calloc((size_t)JLTYPES,sizeof(double *)))==NULL) { 
-						fprintf(stderr,"error in memory allocation\n");
+						fprintf(stdout,"error in memory allocation\n");
 						exit(1);
 					}
 					if((expTG[k][t][s]= (double ***)calloc((size_t)JLTYPES,sizeof(double **)))==NULL) { 
-						fprintf(stderr,"error in memory allocation\n");
+						fprintf(stdout,"error in memory allocation\n");
 						exit(1);
 					}
 					for(jl=0;jl<JLTYPES;jl++){
 						if((P[k][t][s][jl]= (double *)calloc((size_t)3,sizeof(double)))==NULL) { 
-							fprintf(stderr,"error in memory allocation\n");
+							fprintf(stdout,"error in memory allocation\n");
 							exit(1);
 						}
 						if((expTG[k][t][s][jl]= (double **)calloc((size_t)3,sizeof(double *)))==NULL) { 
-							fprintf(stderr,"error in memory allocation\n");
+							fprintf(stdout,"error in memory allocation\n");
 							exit(1);
 						}
 						for(g=0;g<3;g++){
 							if((expTG[k][t][s][jl][g]= (double *)calloc((size_t)3,sizeof(double)))==NULL) { 
-								fprintf(stderr,"error in memory allocation\n");
+								fprintf(stdout,"error in memory allocation\n");
 								exit(1);
 							}
 						}
@@ -774,18 +774,18 @@ int main(int argc, char *argv[]) {
 	fprintf(stdout,"\n");
 	
 	if (argc < 8 || argc > 10) {
-		fprintf(stderr,"Usage: %s infile outfile errormodel heterogamety ploidy paralogs expert (min_coverage)\n",argv[0]);
+		fprintf(stdout,"Usage: %s infile outfile errormodel heterogamety ploidy paralogs expert (min_coverage)\n",argv[0]);
 		exit(1);
 	}
 
 	i=1;
 	if((fp=fopen(argv[i],"r"))==NULL){
-		fprintf(stderr,"error opening input file %s\n",argv[1]);
+		fprintf(stdout,"error opening input file %s\n",argv[1]);
 		exit(1);
 	}
 	i++;
 	if((outfile=fopen(argv[i],"w"))==NULL){
-		fprintf(stderr,"error opening output file %s\n",argv[2]);
+		fprintf(stdout,"error opening output file %s\n",argv[2]);
 		exit(1);
 	}
 	i++;
@@ -805,7 +805,7 @@ int main(int argc, char *argv[]) {
 		errno=0;
 		e = std::strtod(argv[i], &fin);
 		if (*fin != '\0' || errno != 0 ) {
-			fprintf(stderr,"Failed to convert argument %d (\"%s\") to double\n",i,argv[i]);
+			fprintf(stdout,"Failed to convert argument %d (\"%s\") to double\n",i,argv[i]);
 			exit(1);
 		}		
 	}
@@ -813,8 +813,8 @@ int main(int argc, char *argv[]) {
 		errormodel=READ_FROM_CNT_FILE;
 	}
 	else {
-		fprintf(stderr,"Usage: %s infile outfile errormodel heterogamety ploidy paralogs expert (min_coverage)\n",argv[0]);
-		fprintf(stderr,"Errormodel should be either \"e\" or \"1\" to estimate errors, \"f\" or \"2\" to use fixed error rates, or \"n\" or \"0\" for no errors\n");
+		fprintf(stdout,"Usage: %s infile outfile errormodel heterogamety ploidy paralogs expert (min_coverage)\n",argv[0]);
+		fprintf(stdout,"Errormodel should be either \"e\" or \"1\" to estimate errors, \"f\" or \"2\" to use fixed error rates, or \"n\" or \"0\" for no errors\n");
 		exit(1);	
 	}
 
@@ -839,8 +839,8 @@ int main(int argc, char *argv[]) {
 		npi+=2;
 	}
 	else {
-		fprintf(stderr,"Usage: %s infile outfile errormodel heterogamety ploidy paralogs expert (min_coverage)\n",argv[0]);
-		fprintf(stderr,"Heterogamety should be either be \"x\" or \"1\" for XY type, \"z\" or \"2\" for ZW type, \"n\" or \"0\" for no sex chromosomes, or \"b\" or \"3\" for both.\n");
+		fprintf(stdout,"Usage: %s infile outfile errormodel heterogamety ploidy paralogs expert (min_coverage)\n",argv[0]);
+		fprintf(stdout,"Heterogamety should be either be \"x\" or \"1\" for XY type, \"z\" or \"2\" for ZW type, \"n\" or \"0\" for no sex chromosomes, or \"b\" or \"3\" for both.\n");
 		exit(1);	
 	}
 	i++;
@@ -853,8 +853,8 @@ int main(int argc, char *argv[]) {
 		npi++;
 	}
 	else {
-		fprintf(stderr,"Usage: %s infile outfile errormodel heterogamety ploidy paralogs expert (min_coverage)\n",argv[0]);
-		fprintf(stderr,"Ploidy should be either be \"d\" or \"0\" for diploid only, \"h\" or \"1\" for including haploid genes\n");
+		fprintf(stdout,"Usage: %s infile outfile errormodel heterogamety ploidy paralogs expert (min_coverage)\n",argv[0]);
+		fprintf(stdout,"Ploidy should be either be \"d\" or \"0\" for diploid only, \"h\" or \"1\" for including haploid genes\n");
 		exit(1);	
 	}
 	i++;
@@ -866,8 +866,8 @@ int main(int argc, char *argv[]) {
 		npi++;
 	}
 	else {
-		fprintf(stderr,"Usage: %s infile outfile errormodel heterogamety ploidy paralogs expert (min_coverage)\n",argv[0]);
-		fprintf(stderr,"Paralogs should be either be \"o\" or \"0\" for orthologs only, \"p\" or \"1\" for including paralogy\n");
+		fprintf(stdout,"Usage: %s infile outfile errormodel heterogamety ploidy paralogs expert (min_coverage)\n",argv[0]);
+		fprintf(stdout,"Paralogs should be either be \"o\" or \"0\" for orthologs only, \"p\" or \"1\" for including paralogy\n");
 		exit(1);	
 	}
 	i++;
@@ -878,8 +878,8 @@ int main(int argc, char *argv[]) {
 		expert=1;
 	}
 	else {
-		fprintf(stderr,"Usage: %s infile outfile errormodel heterogamety ploidy paralogs expert (min_coverage)\n",argv[0]);
-		fprintf(stderr,"expert should be either be \"s\" or \"0\" for simple output mode, \"e\" or \"1\" for expert output mode\n");
+		fprintf(stdout,"Usage: %s infile outfile errormodel heterogamety ploidy paralogs expert (min_coverage)\n",argv[0]);
+		fprintf(stdout,"expert should be either be \"s\" or \"0\" for simple output mode, \"e\" or \"1\" for expert output mode\n");
 		exit(1);	
 	}
 
@@ -889,7 +889,7 @@ int main(int argc, char *argv[]) {
 		errno=0;
 		mincov = std::strtod(argv[i], &fin);
 		if (*fin != '\0' || errno != 0 ) {
-			fprintf(stderr,"Failed to convert argument %d (\"%s\") to double\n",i,argv[i]);
+			fprintf(stdout,"Failed to convert argument %d (\"%s\") to double\n",i,argv[i]);
 			exit(1);
 		}
 	}
@@ -954,11 +954,11 @@ int main(int argc, char *argv[]) {
 	}
 	fprintf(stdout,"%d contigs remaining after filtering for coverage\n",contigs.size());
 	if(contigs.size()==0){
-		fprintf(stderr,"No contigs left; nothing to do.\n");
+		fprintf(stdout,"No contigs left; nothing to do.\n");
 		exit(0);
 	}
 	if(totsites==0){
-		fprintf(stderr,"No polymorphic sites found; nothing to do.\n");
+		fprintf(stdout,"No polymorphic sites found; nothing to do.\n");
 		exit(0);
 	}
 	
@@ -988,28 +988,28 @@ int main(int argc, char *argv[]) {
     });
     
     if((rho=(double **)calloc((size_t)JTYPES,sizeof(double *)))==NULL) { 
-    	fprintf(stderr,"error in memory allocation\n");
+    	fprintf(stdout,"error in memory allocation\n");
     	exit(1);
     }
     if((oldrho=(double **)calloc((size_t)JTYPES,sizeof(double *)))==NULL) { 
-    	fprintf(stderr,"error in memory allocation\n");
+    	fprintf(stdout,"error in memory allocation\n");
     	exit(1);
     }
     if((rhodelta=(long double **)calloc((size_t)JTYPES,sizeof(long double *)))==NULL) { 
-    	fprintf(stderr,"error in memory allocation\n");
+    	fprintf(stdout,"error in memory allocation\n");
     	exit(1);
     }
     for(j=0;j<JTYPES;j++){
     	if((rho[j]=(double *)calloc((size_t)4,sizeof(double)))==NULL) { 
-    		fprintf(stderr,"error in memory allocation\n");
+    		fprintf(stdout,"error in memory allocation\n");
     		exit(1);
     	}
     	if((oldrho[j]=(double *)calloc((size_t)4,sizeof(double)))==NULL) { 
-    		fprintf(stderr,"error in memory allocation\n");
+    		fprintf(stdout,"error in memory allocation\n");
     		exit(1);
     	}
     	if((rhodelta[j]=(long double *)calloc((size_t)4,sizeof(long double)))==NULL) { 
-    		fprintf(stderr,"error in memory allocation\n");
+    		fprintf(stdout,"error in memory allocation\n");
     		exit(1);
     	}
     }
@@ -1078,23 +1078,23 @@ int main(int argc, char *argv[]) {
 							loghorner(4,lmax,templ,rho[J_SEX],expA[k][t][J_SEX]);
 							foreach_l_xy(model,[&](const auto l,const auto jl,const auto j){
 									if(isnan(expA[k][t][j][l])){
-										fprintf(stderr,"NaN produced (E-step, new value for A): contig %d, site %d, type %d, subtype %d (%d): %e\n",k,current_contig.varsites[t].position,j,jl,l,expA[k][t][j][l]);
+										fprintf(stdout,"NaN produced (E-step, new value for A): contig %d, site %d, type %d, subtype %d (%d): %e\n",k,current_contig.varsites[t].position,j,jl,l,expA[k][t][j][l]);
 										for (i=0; i<6; i++) {
-											fprintf(stderr,"%d\t",current_contig.varsites[0].genotypes_by_sex[i]);
+											fprintf(stdout,"%d\t",current_contig.varsites[0].genotypes_by_sex[i]);
 										}
-										fprintf(stderr,"\n");
+										fprintf(stdout,"\n");
 										foreach_jl(model,[&](const auto jl){
-										fprintf(stderr,"%Le\t",condsiteprob[k][t][jl]);
+										fprintf(stdout,"%Le\t",condsiteprob[k][t][jl]);
 										});
-										fprintf(stderr,"\n");
+										fprintf(stdout,"\n");
 										foreach_j(model,[&](const auto j){
-										fprintf(stderr,"%d %f %Le\t",j,pi[j],condsegprob[k][t][j]);
+										fprintf(stdout,"%d %f %Le\t",j,pi[j],condsegprob[k][t][j]);
 										});
-										fprintf(stderr,"\n");
+										fprintf(stdout,"\n");
 										warning=1;
 									}
 									else if(isinf(expA[k][t][j][l])){
-										fprintf(stderr,"Inf produced (expA): contig %d, site %d, type %d, subtype %d (%d): %e\n",k,current_contig.varsites[t].position,j,jl,l,expA[k][t][j][l]);
+										fprintf(stdout,"Inf produced (expA): contig %d, site %d, type %d, subtype %d (%d): %e\n",k,current_contig.varsites[t].position,j,jl,l,expA[k][t][j][l]);
 									}
 							});
 						}
@@ -1130,23 +1130,23 @@ int main(int argc, char *argv[]) {
 							loghorner(JTYPES,jmax,temp,pi,expS[k][t]);			
 							foreach_j(model,[&](const auto j){
 									if(isnan(expS[k][t][j])){
-										fprintf(stderr,"NaN produced (expS): contig %d, site %d, type %d: %f\n",k,current_contig.varsites[t].position,j,expS[k][t][j]);
+										fprintf(stdout,"NaN produced (expS): contig %d, site %d, type %d: %f\n",k,current_contig.varsites[t].position,j,expS[k][t][j]);
 										for (i=0; i<6; i++) {
-											fprintf(stderr,"%d\t",current_contig.varsites[0].genotypes_by_sex[i]);
+											fprintf(stdout,"%d\t",current_contig.varsites[0].genotypes_by_sex[i]);
 										}
-										fprintf(stderr,"\n");
+										fprintf(stdout,"\n");
 										foreach_jl(model,[&](const auto jl){
-										fprintf(stderr,"%Le\t",condsiteprob[k][t][jl]);
+										fprintf(stdout,"%Le\t",condsiteprob[k][t][jl]);
 										});
-										fprintf(stderr,"\n");
+										fprintf(stdout,"\n");
 										foreach_j(model,[&](const auto j){
-										fprintf(stderr,"%d %f %Le\t",j,pi[j],condsegprob[k][t][j]);
+										fprintf(stdout,"%d %f %Le\t",j,pi[j],condsegprob[k][t][j]);
 										});
-										fprintf(stderr,"\n");
+										fprintf(stdout,"\n");
 										warning=1;
 									}
 									else if(isinf(expS[k][t][j])){
-										fprintf(stderr,"Inf produced (expS): contig %d, site %d, type %d: %f\n",k,current_contig.varsites[t].position,j,expS[k][t][j]);
+										fprintf(stdout,"Inf produced (expS): contig %d, site %d, type %d: %f\n",k,current_contig.varsites[t].position,j,expS[k][t][j]);
 									}
 							});
 						}
@@ -1165,15 +1165,33 @@ int main(int argc, char *argv[]) {
 										maxgp=temp[gp];
 										gpmax=gp;
 									}
+									sumgp+=temp[gp];
+								}
+								if(isnan(sumgp)){
+									fprintf(stdout,"NaN produced (expTG): k=%d t=%d s=%d jl=%d g=%d gp=%d: %f %f\n",k,t,s,jl,g,gp,expR[k][j],temp[gp]);
+									for(gp=0;gp<3;gp++){
+										fprintf(stdout,"temp[%d]: %Le\t",gp,temp[gp]);
+									}
+									fprintf(stdout,"\nn =");
+									for(i=0;i<6;i++){
+										fprintf(stdout," %d",contigs[k].varsites[t].genotypes_by_sex[i]);
+									}
+									fprintf(stdout,"\n");
+									warning=1;
 								}
 								loghorner(3,gpmax,temp,Q[g],expTG[k][t][s][jl][g]);						
-									for(gp=0;gp<3;gp++){
+								for(gp=0;gp<3;gp++){
 									if(isnan(expTG[k][t][s][jl][g][gp])){
-										fprintf(stderr,"NaN produced (expTG): k=%d t=%d s=%d jl=%d g=%d gp=%d: %f\n",k,t,s,jl,g,gp,expR[k][j]);
+										fprintf(stdout,"NaN produced (expTG): k=%d t=%d s=%d jl=%d g=%d gp=%d: %f %f\n",k,t,s,jl,g,gp,expR[k][j],temp[gp]);
+										fprintf(stdout,"Q:%e\t",Q[g][gp]);
+										for(i=0;i<3;i++){
+											fprintf(stdout,"temp[%d]: %Le\t",i,temp[i]);
+										}
+										fprintf(stdout,"\n");
 										warning=1;
 									}
 									else if(isinf(expTG[k][t][s][jl][g][gp])){
-										fprintf(stderr,"Inf produced (expTG): k=%d t=%d s=%d jl=%d g=%d gp=%d: %f\n",k,t,s,jl,g,gp,expR[k][j]);
+										fprintf(stdout,"Inf produced (expTG): k=%d t=%d s=%d jl=%d g=%d gp=%d: %f\n",k,t,s,jl,g,gp,expR[k][j]);
 									}
 								}
 							}
@@ -1268,15 +1286,17 @@ int main(int argc, char *argv[]) {
 									auto lfunc = [&](const auto l,const auto jl,const auto j){
 										temp[s]+=(long double)expTG[k][t][s][jl][g][gp]*(long double)expS[k][t][j]*(long double)expA[k][t][j][l];
 										if(isnan(temp[s])){
-											fprintf(stderr,"NaN produced (M-step, new value for e): contig %d, site %d, sex %d, type %d, subtype %d (%d): %Le\n",k,current_contig.varsites[t].position,s,j,jl,l,temp[s]);
-											fprintf(stderr,"%e\t%e\t%e\n",expTG[k][t][s][jl][g][gp],expS[k][t][j],expA[k][t][j][l]);
+											fprintf(stdout,"NaN produced (M-step, new value for e): contig %d, site %d, sex %d, type %d, subtype %d (%d): %Le\n",k,current_contig.varsites[t].position,s,j,jl,l,temp[s]);
+											fprintf(stdout,"%e\t%e\t%e\n",expTG[k][t][s][jl][g][gp],expS[k][t][j],expA[k][t][j][l]);
+											warning=1;
 										}										
 									};
 									foreach_j(model,[&](const auto j){
 											if(j== J_AUTO || j== J_HAPLOID){
 												temp[s]+=(long double)expTG[k][t][s][j][g][gp]*(long double)expS[k][t][j];
 												if(isnan(temp[s])){
-													fprintf(stderr,"NaN produced (M-step, new value for e): contig %d, site %d, sex %d, type %d: %Le\n",k,current_contig.varsites[t].position,s,j,temp[s]);
+													fprintf(stdout,"NaN produced (M-step, new value for e): contig %d, site %d, sex %d, type %d: %Le\n",k,current_contig.varsites[t].position,s,j,temp[s]);
+												warning=1;
 												}
 											}
 											if(j==J_PARA){
@@ -1285,7 +1305,8 @@ int main(int argc, char *argv[]) {
 											if(j==J_HEMI){
 												temp[s]+=(long double)expTG[k][t][s][JL_HEMI][g][gp]*(long double)expS[k][t][j];
 												if(isnan(temp[s])){
-													fprintf(stderr,"NaN produced (M-step, new value for e): contig %d, site %d, sex %d, type %d: %Le\n",k,current_contig.varsites[t].position,s,j,temp[s]);
+													fprintf(stdout,"NaN produced (M-step, new value for e): contig %d, site %d, sex %d, type %d: %Le\n",k,current_contig.varsites[t].position,s,j,temp[s]);
+												warning=1;
 												}
 											}
 											if(j==J_SEX){
@@ -1294,7 +1315,8 @@ int main(int argc, char *argv[]) {
 											if(j==J_ZHEMI){
 												temp[s]+=(long double)expTG[k][t][s][JL_ZHEMI][g][gp]*(long double)expS[k][t][j];
 												if(isnan(temp[s])){
-													fprintf(stderr,"NaN produced (M-step, new value for e): contig %d, site %d, sex %d, type %d: %Le\n",k,current_contig.varsites[t].position,s,j,temp[s]);
+													fprintf(stdout,"NaN produced (M-step, new value for e): contig %d, site %d, sex %d, type %d: %Le\n",k,current_contig.varsites[t].position,s,j,temp[s]);
+												warning=1;
 												}
 											}
 											if(j==J_ZW){
@@ -1302,11 +1324,12 @@ int main(int argc, char *argv[]) {
 											}
 									});
 									if(isnan(temp[s])){
-										fprintf(stderr,"NaN produced (M-step, new value for e): contig %d, site %d, sex %d: %Le\n",k,current_contig.varsites[t].position,s,temp[s]);
+										fprintf(stdout,"NaN produced (M-step, new value for e): contig %d, site %d, sex %d: %Le\n",k,current_contig.varsites[t].position,s,temp[s]);
+												warning=1;
 									}
 									temp[s]*=(long double)current_contig.varsites[t].genotypes_by_sex[g+3*s];
 									if(isnan(temp[s])){
-										fprintf(stderr,"NaN produced (M-step, new value for e): contig %d, site %d, sex %d: %Le\n",k,current_contig.varsites[t].position,s,temp[s]);
+										fprintf(stdout,"NaN produced (M-step, new value for e): contig %d, site %d, sex %d: %Le\n",k,current_contig.varsites[t].position,s,temp[s]);
 										warning=1;
 									}
 								}
@@ -1317,7 +1340,7 @@ int main(int argc, char *argv[]) {
 					//				printf("%d %d %f ",g,gp,U[g][gp]);
 				}
 			}
-			//	printf("\n");
+			//printf("\n");
 			Usim=0;
 			Udis=0;
 			for(g=0;g<3;g++){
@@ -1330,7 +1353,7 @@ int main(int argc, char *argv[]) {
 					}
 				}
 			}
-			//printf("%f %f\n",Udis,Usim);
+			//printf("Udis: %f Usim: %f\n",Udis,Usim);
 			e=Udis/(2*(Udis+Usim));
 			if(e<GSL_DBL_MIN){
 				e=GSL_DBL_MIN;
@@ -1386,7 +1409,7 @@ int main(int argc, char *argv[]) {
 		loglik=totalsiteloglik(contigs,pi,rho);
 		fprintf(stdout,", log-likelihood: %Lf\n",loglik);
 		if(oldloglik > loglik){
-			fprintf(stderr,"Warning: log-likelihood decreases by %Lf; interrupting maximization and proceeding to output\n",oldloglik-loglik);
+			fprintf(stdout,"Warning: log-likelihood decreases by %Lf; interrupting maximization and proceeding to output\n",oldloglik-loglik);
 			warning=1;
 		}
 
@@ -1394,15 +1417,15 @@ int main(int argc, char *argv[]) {
 	//End of EM algorithm. Outputting
 	
 	if(warning){
-		fprintf(outfile,"Warning: an error occurred, probably due to numerical problems (see stderr for details). The following output should not be used for other purposes than finding the error.\n");
+		fprintf(outfile,"Warning: an error occurred, probably due to numerical problems (see stdout for details). The following output should not be used for other purposes than finding the error.\n");
 	}
 	
 	if((geom_score=(double *)malloc(sizeof(double)*JTYPES))==NULL) {
-		fprintf(stderr,"error in memory allocation\n");
+		fprintf(stdout,"error in memory allocation\n");
 		exit(1);
 	}
 	if((geom_nopi_score=(double *)malloc(sizeof(double)*JTYPES))==NULL) {
-		fprintf(stderr,"error in memory allocation\n");
+		fprintf(stdout,"error in memory allocation\n");
 		exit(1);
 	}
 	
@@ -1571,7 +1594,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	if((expS_nopi= (double *)calloc((size_t)JTYPES,sizeof(double)))==NULL) { 
-		fprintf(stderr,"error in memory allocation\n");
+		fprintf(stdout,"error in memory allocation\n");
 		exit(1);
 	}
 

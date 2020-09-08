@@ -224,6 +224,14 @@ void loghorner(int length, int lmax, long double* logarray, double* param, doubl
 		}
 	}
 	ltot=logl(tot)+logarray[lmax];
+	if(isnan(ltot)){
+		fprintf(stdout,"Error: NaN produced (ltot, loghorner)\n");
+		fprintf(stdout,"length=%d, lmax=%d\n",length,lmax);
+		for(i=0;i<length;i++){
+			fprintf(stdout,"%d: logarray=%Le, param=%e\n",i,logarray[i],param[i]);
+		}
+		exit(1);
+	}
 	for(i=0;i<length;i++){
 //		temp[0]=logarray[i];
 //		temp[1]=logl((long double)param[i]);
