@@ -1410,14 +1410,17 @@ int main(int argc, char *argv[]) {
 		fprintf(stdout,", log-likelihood: %Lf\n",loglik);
 		if(oldloglik > loglik){
 			fprintf(stdout,"Warning: log-likelihood decreases by %Lf; interrupting maximization and proceeding to output\n",oldloglik-loglik);
-			warning=1;
+			warning=2;
 		}
 
 	}
 	//End of EM algorithm. Outputting
 	
-	if(warning){
-		fprintf(outfile,"Warning: an error occurred, probably due to numerical problems (see stdout for details). The following output should not be used for other purposes than finding the error.\n");
+	if(warning==1){
+		fprintf(outfile,"An error occurred, probably due to numerical problems (see stdout for details). The current output is provided only for debugging purposes.\n");
+	}
+	else if(warning==2){
+		fprintf(outfile,"Warning: there have been some numerical problems. These might just be due to the limits of precision, so please re-run the program and check if the optimized values are close to the current values. If they are, it's probably safe to interpret them.\n");
 	}
 	
 	if((geom_score=(double *)malloc(sizeof(double)*JTYPES))==NULL) {
