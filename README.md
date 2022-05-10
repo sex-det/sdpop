@@ -5,6 +5,11 @@ Author: Jos Kafer, jos.kafer@univ-lyon1.fr
 
 SDpop infers sex-linkage from genotyping data of several individuals of both sexes, collected in panmictic populations. 
 
+To install, make sure you have a sufficiently recent C++ compiler (understanding C++11) and type:
+make all
+If you're on a computer cluster, you might want to compile statically, which you could try to do with:
+make CXXFLAGS="--static" all
+
 The software is provided "as is" and is still under development. 
 It is developed by me (Jos Käfer); I'm a research scientist interested in plant evolutionary biology, not a software 
 developer interested in optimizing code. Thus, the programs provided here are aimed to work on my data and with my 
