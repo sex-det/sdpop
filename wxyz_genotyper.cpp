@@ -82,13 +82,21 @@ struct lowercase {
 void treat_and_output(ContigGenotypesA contiggenotypes, ContigA contigsites, std::vector<std::vector<double>> contigf, const double sitethreshold1, const double sitethreshold2, FILE *outfile){
 	int npos=contiggenotypes.genotypes.size();
 	int nind=contiggenotypes.individuals.size();
-	int amax,i,ii,j,div,t;
+	int amax,i,ii,j,div,t,position,newposition;
 	std::string sequenceX;
 	std::string sequenceY;
 	int nsites=0,nmsites=0,nmlen=0,fixed=0,totreflen=0,refX=0,refY=0;
 	double pi_X=0,pi_Y=0,divergence=0;
 	
+	position=0;
 	for (j=0; j<npos; j++){
+		//check whether we already have genotyped the position
+		if((newposition=contiggenotypes.genotypes[j].position)<=position){
+			continue;
+		}
+		else {
+			position=newposition;
+		}
 		if(contiggenotypes.genotypes[j].alleles.size()==0){
 				sequenceX+="N";
 				sequenceY+="N";
@@ -272,7 +280,7 @@ void treat_and_output(ContigGenotypesA contiggenotypes, ContigA contigsites, std
 			}
 			
 		}
-		j=j+reflen-1;
+		position=position+reflen-1;
 	}
 	//fprintf(outfile,">%s_X %d %d %d %f %f %d\n",contig,t,fixed,ns,pi_X/ns,divergence/ns,Xref);
 	
