@@ -272,6 +272,7 @@ void treat_and_output(ContigGenotypesA contiggenotypes, ContigA contigsites, std
 			}
 			
 		}
+		j=j+reflen-1;
 	}
 	//fprintf(outfile,">%s_X %d %d %d %f %f %d\n",contig,t,fixed,ns,pi_X/ns,divergence/ns,Xref);
 	
