@@ -1,7 +1,7 @@
 SDpop
 =====
 
-Author: Jos Kafer, jos.kafer@univ-lyon1.fr
+Author: Jos Kafer, jos.kafer@cnrs.fr
 
 SDpop infers sex-linkage from genotyping data of several individuals of both sexes, collected in panmictic populations. 
 
