@@ -10,7 +10,7 @@ make all
 If you're on a computer cluster, you might want to compile statically, which you could try to do with:
 make CXXFLAGS="--static" all
 
-#Preamble
+# Preamble
 
 The software is provided "as is" and is still under development. 
 It is developed by me (Jos Käfer); I'm a research scientist interested in plant evolutionary biology, not a software 
@@ -29,7 +29,7 @@ written more concisely, and several algorithmic techniques could greatly diminis
 of the first things to do would be to compress the data and to do calculations for sites with the same observed 
 genotypes only once.
 
-#Typical data analysis workflow
+# Typical data analysis workflow
 
 You can read the paper about SDpop here: https://academic.oup.com/genetics/article/218/2/iyab053/6187941
 It presents the analyses of two datasets.
