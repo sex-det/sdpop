@@ -621,7 +621,7 @@ std::vector<Genotype> vcfgenotypes(int ni, int *sex, const char *linein, char *n
 	sscanf(line,"%s\t%s\t%*s\t%*s\t%*s\t%*s\t%*s\t%*s\t%s%[^\n]",contig,position,vcfformatstring,tmpline);
 	strcpy(line,tmpline);
 	if(strncmp(vcfformatstring,"GT",2)!=0){
-		fprintf(stderr,"Error: this doesn't seem to be a supported format (\"GT\" tag not found where expected)\n");
+		fprintf(stderr,"Error: this doesn't seem to be a supported format (\"GT\" tag not found where expected: %s\t%s\t%s)\n",contig,position,vcfformatstring);
 		exit(1);					
 	}
 	
