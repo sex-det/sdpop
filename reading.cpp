@@ -673,7 +673,7 @@ std::vector<GenotypeA> vcfalleles(int ni, int *sex, const char *linein)
 	sscanf(line,"%s\t%s\t%*s\t%*s\t%*s\t%*s\t%*s\t%*s\t%s%[^\n]",contig,position,vcfformatstring,tmpline);
 	strcpy(line,tmpline);
 	if(strncmp(vcfformatstring,"GT",2)!=0){
-		fprintf(stderr,"Error: this doesn't seem to be a supported format (\"GT\" tag not found where expected)\n");
+		fprintf(stderr,"Error: this doesn't seem to be a supported format (\"GT\" tag not found where expected: %s\t%s\t%s)\n",contig,position,vcfformatstring);
 		exit(1);					
 	}
 //	printf("%s\t%s\t",contig,position);
