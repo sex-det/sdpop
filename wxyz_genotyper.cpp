@@ -427,12 +427,12 @@ int main(int argc, char *argv[])
 				nwords=0;
 				posterior_field=-1;
 				while ( sscanf(line,"%[^\t ]%*[\t ]%[^\n]",word,tmpline)==2)	{
+					strcpy(line,tmpline);
 					if(strcmp(word,argv[8])==0){
 						posterior_field=nwords;
 						break;
 					}
 					nwords++;
-					strcpy(line,tmpline);
 				}
 //				printf("%d\n",posterior_field);
 				if(posterior_field<0){
@@ -451,8 +451,8 @@ int main(int argc, char *argv[])
 				}
 				nwords=0;
 				while ( sscanf(line,"%[^\t ]%*[\t ]%[^\n]",word,tmpline)==2)	{
-//					printf("%d \"%s\"\t",nwords,word);
 					strcpy(line,tmpline);
+//					printf("%d \"%s\"\t",nwords,word);
 					if(xy){
 						if (mean==0){
 							if(strcmp(word,"fx_max")==0) {
@@ -512,8 +512,8 @@ int main(int argc, char *argv[])
 //			sscanf(line,">%s\t%d\t%[^\n]",tcont,&npolysites,tmpline);
 //			nwords=2;
 			sscanf(line,">%s\t%[^\n]",tcont,tmpline);
-			nwords=1;
 			strcpy(line,tmpline);
+			nwords=1;
 			while ( sscanf(line,"%[^\t ]%*[\t ]%[^\n]",word,tmpline)==2)	{
 				strcpy(line,tmpline);
 				if(nwords==posterior_field){
@@ -545,19 +545,20 @@ int main(int argc, char *argv[])
 //			printf("%s",line);
 			Varsite tempvarsite;
 			std::vector<double> tempfsite;
-			if(sscanf(line,"%d\t%[^,],%s\t%d\t%d\t%d\t%d\t%d\t%d\t%[^\n]",&tempvarsite.position,nuc1,nuc2,
-						&tempvarsite.genotypes_by_sex[N11F],&tempvarsite.genotypes_by_sex[N12F],
-					&tempvarsite.genotypes_by_sex[N22F],&tempvarsite.genotypes_by_sex[N11M],&tempvarsite.genotypes_by_sex[N12M],
-					&tempvarsite.genotypes_by_sex[N22M],tmpline)!=10){
+//			if(sscanf(line,"%d\t%[^,],%s\t%d\t%d\t%d\t%d\t%d\t%d\t%[^\n]",&tempvarsite.position,nuc1,nuc2,
+//						&tempvarsite.genotypes_by_sex[N11F],&tempvarsite.genotypes_by_sex[N12F],
+//					&tempvarsite.genotypes_by_sex[N22F],&tempvarsite.genotypes_by_sex[N11M],&tempvarsite.genotypes_by_sex[N12M],
+//					&tempvarsite.genotypes_by_sex[N22M],tmpline)!=10){
+			if(sscanf(line,"%d\t%[^,],%s\t%[^\n]",&tempvarsite.position,nuc1,nuc2,tmpline)!=4){
 					fprintf(stderr,"Error reading line %d\n",l);
 					fprintf(stderr,"Line: %s\n",line);
 					exit(1);		
 			}
+			strcpy(line,tmpline);
 			tempvarsite.alleles.push_back(nuc1);				
 			tempvarsite.alleles.push_back(nuc2);				
 			current_contig.varsites.push_back(tempvarsite);
-			strcpy(line,tmpline);
-			nwords=8;
+			nwords=2;
 			j=0;
 			while ( sscanf(line,"%[^\t ]%*[\t ]%[^\n]",word,tmpline)==2)	{
 				strcpy(line,tmpline);
