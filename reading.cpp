@@ -682,26 +682,32 @@ std::vector<GenotypeA> vcfalleles(int ni, int *sex, const char *linein)
 		if (sex[i]>=0) {
 			GenotypeA genotype;
 			sscanf(line,"\t%s%[^\n]",genotypestring,tmpline);
+//			printf("%d:%s\t",i,genotypestring);
+//			fflush(stdout);
 			if(genotypestring[0]=='.'){
 				genotype.allele.push_back(-1);
 				genotype.allele.push_back(-1);				
 			}
 			else {
 				j=0;
-				while(genotypestring[j]!=':' && genotypestring[j]!='/' && genotypestring[j]!='|'){
+//				while(genotypestring[j]!=':' && genotypestring[j]!='/' && genotypestring[j]!='|'){
+				while(genotypestring[j]=='0' || genotypestring[j]=='1' || genotypestring[j]=='2' || genotypestring[j]=='3' || genotypestring[j]=='4' || genotypestring[j]=='5' || genotypestring[j]=='6' || genotypestring[j]=='7' || genotypestring[j]=='8' || genotypestring[j]=='9'){
 					gen[j]=genotypestring[j];
 					j++;
 				}
 				gen[j]='\0';
-//				printf("%d:%s",i,gen);
+//				printf("%d:%s(%d)",i,gen,j);
 				genotype.allele.push_back(atoi(gen));
 				k=0;
-				while(genotypestring[j+k+1]!=':' && genotypestring[j+k+1]!='/' && genotypestring[j+k+1]!='|'){
+//				while(genotypestring[j+k+1]!=':' && genotypestring[j+k+1]!='/' && genotypestring[j+k+1]!='|' && genotypestring[j+k+1]!=' ' && genotypestring[j+k+1]!='\t'){
+				while(genotypestring[j+k+1]=='0' || genotypestring[j+k+1]=='1' || genotypestring[j+k+1]=='2' || genotypestring[j+k+1]=='3' || genotypestring[j+k+1]=='4' || genotypestring[j+k+1]=='5' || genotypestring[j+k+1]=='6' || genotypestring[j+k+1]=='7' || genotypestring[j+k+1]=='8' || genotypestring[j+k+1]=='9'){
 					gen[k]=genotypestring[j+k+1];
+//					printf(",%d,%s",k,gen);
+//					fflush(stdout);
 					k++;
 				}
 				gen[k]='\0';
-//				printf("/%s\t",gen);
+//				printf("/%s(%d)\t",gen,k);
 				genotype.allele.push_back(atoi(gen));
 			}
 //			for(ii=0;ii<2;ii++){

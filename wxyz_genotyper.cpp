@@ -509,8 +509,10 @@ int main(int argc, char *argv[])
 				exit(1);
 			}
 //			printf("%s",line);
-			sscanf(line,">%s\t%d\t%[^\n]",tcont,&npolysites,tmpline);
-			nwords=2;
+//			sscanf(line,">%s\t%d\t%[^\n]",tcont,&npolysites,tmpline);
+//			nwords=2;
+			sscanf(line,">%s\t%[^\n]",tcont,tmpline);
+			nwords=1;
 			strcpy(line,tmpline);
 			while ( sscanf(line,"%[^\t ]%*[\t ]%[^\n]",word,tmpline)==2)	{
 				strcpy(line,tmpline);
@@ -536,10 +538,10 @@ int main(int argc, char *argv[])
 		}
 		else if(isdigit(line[0]) && toread==1){
 			ContigA & current_contig = contigs.back();
-			if(t>=npolysites){
-				fprintf(stderr,"Error: contig %s does seem to have more polymorphic sites than announced\n",current_contig.name.data());
-				exit(1);				
-			}
+//			if(t>=npolysites){
+//				fprintf(stderr,"Error: contig %s does seem to have more polymorphic sites than announced\n",current_contig.name.data());
+//				exit(1);				
+//			}
 //			printf("%s",line);
 			Varsite tempvarsite;
 			std::vector<double> tempfsite;
