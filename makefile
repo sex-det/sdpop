@@ -1,6 +1,9 @@
 #for static compilation, on computer clusters for instance, try:
 #make CXXFLAGS="--static" all
 
+#uncomment next line for debugging
+#CXXFLAGS += -ggdb
+
 all: popsum sdpop wxyz_genotyper
 
 reading.o: reading.cpp reading.h types.h

@@ -298,7 +298,7 @@ int main(int argc, char *argv[])
 	char *line = (char *)calloc((size_t)CUR_MAX,sizeof(char));
 	char *tmpline = (char *)calloc((size_t)CUR_MAX,sizeof(char));
 	char ch='a',gencontig[NAME_LEN],tcont[NAME_LEN],word[NAME_LEN],chrom[NAME_LEN],oldchrom[NAME_LEN],**name;
-	int npolysites,toread=0,ncontigs,ngencontigs;
+	int npolysites,toread=0,ncontigs,ngencontigs,nchar;
 	double pp,contigthreshold,sitethreshold1,sitethreshold2;
 	char nuc1[NAME_LEN],nuc2[NAME_LEN];
 	int i,j,k,l,t,found,pos,ni,chrpos;
@@ -426,8 +426,10 @@ int main(int argc, char *argv[])
 				//finding contig posteriors
 				nwords=0;
 				posterior_field=-1;
-				while ( sscanf(line,"%[^\t ]%*[\t ]%[^\n]",word,tmpline)==2)	{
-					strcpy(line,tmpline);
+//				while ( sscanf(line,"%[^\t ]%*[\t ]%[^\n]",word,tmpline)==2)	{
+//					strcpy(line,tmpline);
+				while ( sscanf(line,"%s%n",word,&nchar)==1)	{
+					strcpy(line,line+nchar);
 					if(strcmp(word,argv[8])==0){
 						posterior_field=nwords;
 						break;
@@ -450,8 +452,10 @@ int main(int argc, char *argv[])
 					ff[i]=-1;
 				}
 				nwords=0;
-				while ( sscanf(line,"%[^\t ]%*[\t ]%[^\n]",word,tmpline)==2)	{
-					strcpy(line,tmpline);
+//				while ( sscanf(line,"%[^\t ]%*[\t ]%[^\n]",word,tmpline)==2)	{
+//					strcpy(line,tmpline);
+				while ( sscanf(line,"%s%n",word,&nchar)==1)	{
+					strcpy(line,line+nchar);
 //					printf("%d \"%s\"\t",nwords,word);
 					if(xy){
 						if (mean==0){
@@ -511,11 +515,15 @@ int main(int argc, char *argv[])
 //			printf("%s",line);
 //			sscanf(line,">%s\t%d\t%[^\n]",tcont,&npolysites,tmpline);
 //			nwords=2;
-			sscanf(line,">%s\t%[^\n]",tcont,tmpline);
-			strcpy(line,tmpline);
+//			sscanf(line,">%s\t%[^\n]",tcont,tmpline);
+//			strcpy(line,tmpline);
+			sscanf(line,">%s%n",tcont,&nchar);
+			strcpy(line,line+nchar);
 			nwords=1;
-			while ( sscanf(line,"%[^\t ]%*[\t ]%[^\n]",word,tmpline)==2)	{
-				strcpy(line,tmpline);
+//			while ( sscanf(line,"%[^\t ]%*[\t ]%[^\n]",word,tmpline)==2)	{
+//				strcpy(line,tmpline);
+			while ( sscanf(line,"%s%n",word,&nchar)==1)	{
+				strcpy(line,line+nchar);
 				if(nwords==posterior_field){
 					pp=atof(word);
 					break;
@@ -549,19 +557,24 @@ int main(int argc, char *argv[])
 //						&tempvarsite.genotypes_by_sex[N11F],&tempvarsite.genotypes_by_sex[N12F],
 //					&tempvarsite.genotypes_by_sex[N22F],&tempvarsite.genotypes_by_sex[N11M],&tempvarsite.genotypes_by_sex[N12M],
 //					&tempvarsite.genotypes_by_sex[N22M],tmpline)!=10){
-			if(sscanf(line,"%d\t%[^,],%s\t%[^\n]",&tempvarsite.position,nuc1,nuc2,tmpline)!=4){
+//			if(sscanf(line,"%d\t%[^,],%s\t%[^\n]",&tempvarsite.position,nuc1,nuc2,tmpline)!=4){
+			if( sscanf(line,"%d %[^,],%s %n",&tempvarsite.position,nuc1,nuc2,&nchar)!=3)	{
+
 					fprintf(stderr,"Error reading line %d\n",l);
 					fprintf(stderr,"Line: %s\n",line);
 					exit(1);		
 			}
-			strcpy(line,tmpline);
+			strcpy(line,line+nchar);
+//			strcpy(line,tmpline);
 			tempvarsite.alleles.push_back(nuc1);				
 			tempvarsite.alleles.push_back(nuc2);				
 			current_contig.varsites.push_back(tempvarsite);
 			nwords=2;
 			j=0;
-			while ( sscanf(line,"%[^\t ]%*[\t ]%[^\n]",word,tmpline)==2)	{
-				strcpy(line,tmpline);
+//			while ( sscanf(line,"%[^\t ]%*[\t ]%[^\n]",word,tmpline)==2)	{
+//				strcpy(line,tmpline);
+			while ( sscanf(line,"%s%n",word,&nchar)==1)	{
+				strcpy(line,line+nchar);
 				if(nwords==ff[j]){
 					tempfsite.push_back(atof(word));
 					j++;
