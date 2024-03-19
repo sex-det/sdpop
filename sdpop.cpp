@@ -1055,7 +1055,7 @@ int main(int argc, char *argv[]) {
 	it=0;
 	plateausteps=0;
 //	warning=1;
-	while(plateausteps<10 && warning!=1){
+	while(plateausteps<10 && warning==0){
 		it++;
 		fprintf(stdout,"Iteration %d: ",it);
 
