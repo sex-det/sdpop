@@ -403,7 +403,7 @@ int main(int argc, char *argv[])
 		while ( (ch != '\n') && (ch != EOF) ) { //loop through the line
 			if(count == CUR_MAX) { // time to expand (for unexepectedly large line lengths) ?
 				CUR_MAX *= 2; 
-				count = 0;
+//				count = 0;
 				line = (char *)realloc(line, sizeof(char) * CUR_MAX); 
 				tmpline = (char *)realloc(tmpline, sizeof(char) * CUR_MAX); 
 			}
@@ -842,7 +842,7 @@ int main(int argc, char *argv[])
 				while ( (ch != '\n') && (ch != EOF) ) { //loop through the line
 					if(count == CUR_MAX) { // time to expand (for unexepectedly large line lengths) ?
 						CUR_MAX *= 2; 
-						count = 0;
+//						count = 0;
 						line = (char *)realloc(line, sizeof(char) * CUR_MAX); 
 						tmpline = (char *)realloc(tmpline, sizeof(char) * CUR_MAX); 
 					}
