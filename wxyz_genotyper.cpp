@@ -523,12 +523,12 @@ int main(int argc, char *argv[])
 //			while ( sscanf(line,"%[^\t ]%*[\t ]%[^\n]",word,tmpline)==2)	{
 //				strcpy(line,tmpline);
 			while ( sscanf(line,"%s%n",word,&nchar)==1)	{
+				nwords++;
 				strcpy(line,line+nchar);
 				if(nwords==posterior_field){
 					pp=atof(word);
 					break;
 				}
-				nwords++;
 			}	
 			if(pp>=contigthreshold){
 //				printf("%f\n",contigpp[k]);
