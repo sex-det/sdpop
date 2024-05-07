@@ -418,7 +418,7 @@ int main(int argc, char *argv[])
 //		}
 		//We've read one line :
 		l++;
-		
+		//printf("%s",line);
 		//parsing header
 		if ( line[0] == '#' ){
 			if ( line[1] == '>' ){
@@ -429,12 +429,12 @@ int main(int argc, char *argv[])
 //				while ( sscanf(line,"%[^\t ]%*[\t ]%[^\n]",word,tmpline)==2)	{
 //					strcpy(line,tmpline);
 				while ( sscanf(line,"%s%n",word,&nchar)==1)	{
-					strcpy(line,line+nchar);
+					nwords++;
+					memmove(line,line+nchar,strlen(line)-nchar+1);
 					if(strcmp(word,argv[8])==0){
 						posterior_field=nwords;
 						break;
 					}
-					nwords++;
 				}
 //				printf("%d\n",posterior_field);
 				if(posterior_field<0){
@@ -445,7 +445,7 @@ int main(int argc, char *argv[])
 		}
 		if ( line[0] == '#' ){
 			if ( line[1] == 'p' ){
-//				printf("%s",line);
+				//printf("%s",line);
 				//finding allele frequency fields
 				//X and Y (or Z and W) frequencies are separated by a space (not a tab)
 				for(i=0;i<2;i++){
@@ -455,8 +455,12 @@ int main(int argc, char *argv[])
 //				while ( sscanf(line,"%[^\t ]%*[\t ]%[^\n]",word,tmpline)==2)	{
 //					strcpy(line,tmpline);
 				while ( sscanf(line,"%s%n",word,&nchar)==1)	{
-					strcpy(line,line+nchar);
-//					printf("%d \"%s\"\t",nwords,word);
+					//strcpy(line,line+nchar);
+					//printf("%d %d %s\n",strlen(line),nchar,word);
+					memmove(line,line+nchar,strlen(line)-nchar+1);
+					//line += nchar;
+					//printf("%s",line);
+					//printf("%d \"%s\"\t",nwords,word);
 					if(xy){
 						if (mean==0){
 							if(strcmp(word,"fx_max")==0) {
@@ -494,7 +498,12 @@ int main(int argc, char *argv[])
 						}
 					}
 					nwords++;
-				}			
+				}
+				//printf("\n");
+				if (ff[0]<=0 || ff[1]<=0){
+					printf("error: allele frequency field not found. Exiting.\n");
+					exit(1);
+				}
 
 				fprintf(outfile,"#contig_name N_poly_sites length reference_length snp_genotyped_length non_snps non_snp_length N_fixed_diff N_refalleles pi divergence\n");
 			}
@@ -518,13 +527,15 @@ int main(int argc, char *argv[])
 //			sscanf(line,">%s\t%[^\n]",tcont,tmpline);
 //			strcpy(line,tmpline);
 			sscanf(line,">%s%n",tcont,&nchar);
-			strcpy(line,line+nchar);
+			memmove(line,line+nchar,strlen(line)-nchar+1);
+			//strcpy(line,line+nchar);
 			nwords=1;
 //			while ( sscanf(line,"%[^\t ]%*[\t ]%[^\n]",word,tmpline)==2)	{
 //				strcpy(line,tmpline);
 			while ( sscanf(line,"%s%n",word,&nchar)==1)	{
 				nwords++;
-				strcpy(line,line+nchar);
+				memmove(line,line+nchar,strlen(line)-nchar+1);
+				//strcpy(line,line+nchar);
 				if(nwords==posterior_field){
 					pp=atof(word);
 					break;
@@ -536,6 +547,7 @@ int main(int argc, char *argv[])
 				t=0;
 				contigpp.push_back(pp);
 				tempcontig.name=tcont;
+				printf("contig %s, score=%f\n",tcont,pp);
 				contigs.push_back(tempcontig);
 			}
 			else {
@@ -564,7 +576,8 @@ int main(int argc, char *argv[])
 					fprintf(stderr,"Line: %s\n",line);
 					exit(1);		
 			}
-			strcpy(line,line+nchar);
+			memmove(line,line+nchar,strlen(line)-nchar+1);
+			//strcpy(line,line+nchar);
 //			strcpy(line,tmpline);
 			tempvarsite.alleles.push_back(nuc1);				
 			tempvarsite.alleles.push_back(nuc2);				
@@ -574,7 +587,8 @@ int main(int argc, char *argv[])
 //			while ( sscanf(line,"%[^\t ]%*[\t ]%[^\n]",word,tmpline)==2)	{
 //				strcpy(line,tmpline);
 			while ( sscanf(line,"%s%n",word,&nchar)==1)	{
-				strcpy(line,line+nchar);
+				memmove(line,line+nchar,strlen(line)-nchar+1);
+				//strcpy(line,line+nchar);
 				if(nwords==ff[j]){
 					tempfsite.push_back(atof(word));
 					j++;
